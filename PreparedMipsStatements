@@ -1,0 +1,184 @@
+//MATH FUNCTIONS
+
+//var0 = -var1
+lw $t1 , var1
+neg $t0 , $t1
+sw $t0 , var0
+
+//var0 = var1 + var2
+lw $t1 , var1
+lw $t2 , var2
+add $t0 , $t1 , $t2
+sw $t0 , var0
+
+//var0 = var1 + value
+lw $t1 , var1
+addi $t0 , $t1 , value
+sw $t0 , var0
+
+//var = value0 + value1
+li $t0 , value0
+subi $t0 , $t0 , value1
+sw $t0 , var
+
+//var0 = var1 - var2
+lw $t1 , var1
+lw $t2 , var2
+sub $t0 , $t1 , $t2
+sw $t0 , var0
+
+//var0 = var1 - value
+lw $t1 , var1
+subi $t0 , $t1 , value
+sw $t0 , var0
+
+//var = value0 - value1
+li $t0 , value0
+subi $t0 , $t0 , value1
+sw $t0 , var
+
+//(INT) var0 = var1 / var2
+lw $t1 , var1
+lw $t2 , var2
+div $t1 , $t2
+mflo $t0
+sw $t0 , var0
+
+//(INT) var0 = var1 % var2
+lw $t1 , var1
+lw $t2 , var2
+div $t1 , $t2
+mfhi $t0
+
+//var0 = var1 * var2
+lw $t1 , var1
+lw $t2 , var2
+mul $t1 , $t2
+mflo $t0
+sw $t0 , var0
+
+//CONDITIONAL STATEMENTS
+// 1 = TRUE , 0 = FALSE
+//var0 = var1 > var2
+lw $t1 , var1
+lw $t2 , var2
+slt $t0 , $t2 , $t1
+sw $t0 , var0
+
+//var0 = var1 >= var2
+lw $t1 , var1
+lw $t2 , var2
+li $t3 , 1
+bge $t1 , $t2 , TRUE
+b FALSE
+
+TRUE:
+sw $t3 , var0
+b END_CHECK
+FALSE:
+sw $zero , var0
+END_CHECK:
+
+//var0 = var1 < var2
+lw $t1 , var1
+lw $t2 , var2
+slt $t0 , $t1 , $t2
+sw $t0 , var0
+
+//var0 = var1 <= var2
+lw $t1 , var1
+lw $t2 , var2
+li $t3 , 1
+ble $t1 , $t2 , TRUE
+b FALSE
+
+TRUE:
+sw $t3 , var0
+b END_CHECK
+FALSE:
+sw $zero , var0
+END_CHECK:
+
+//var 0 = var1 == var2
+lw $t1 , var1
+lw $t2 , var2
+li $t3 , 1
+beq $t1 , $t2 , TRUE
+b FALSE
+
+TRUE:
+sw $t3 , var0
+b END_CHECK
+FALSE:
+sw $zero , var0
+END_CHECK:
+
+//var 0 = var1 != var2
+lw $t1 , var1
+lw $t2 , var2
+li $t3 , 1
+bne $t1 , $t2 , TRUE
+b FALSE
+
+TRUE:
+sw $t3 , var0
+b END_CHECK
+FALSE:
+sw $zero , var0
+END_CHECK:
+
+//IF THEN ELSE
+
+//if(condition)
+//condition should be calculated using boolean operations (1 for T , 0 for F)
+//when false it skips the content of the if, if it's true it continues downward.
+lw $t0 , condition
+beq $t0 , $zero , END_IF
+BEGIN_IF:
+additional code here
+END_IF:
+
+//if(condition) else
+lw $t0 , condition
+beq $t0 , $zero , ELSE
+BEGIN_IF:
+additional code here
+b END_IF_ELSE:
+ELSE:
+additional code here
+END_IF_ELSE:
+
+//MOVING VARIABLES AROUND
+//var to register
+lw $t0 , var
+
+//set var value
+li $t0 , value
+sw $t0 , var
+
+//set address of var to register
+la $t0 , var
+
+//LOOPS
+
+//for(init ; condition ; operation)
+lw $t0 , init
+beq condition , $zero , END_FOR_LOOP
+START_FOR_LOOP:
+lw $t0 , init
+
+code here
+
+run operation
+sw $t0 , init
+check condition
+END_FOR_LOOP:
+
+//while(condition)
+beq condition , $zero , END_WHILE_LOOP
+START_WHILE_LOOP:
+
+code here
+
+check condiditon
+END_WHILE_LOOP:
