@@ -1,0 +1,33 @@
+<project>
+    <target name="clean">
+        <delete dir="build"/>
+		<delete dir="src/ProjFive"/>
+    </target>
+
+	<target name="makeLexer">
+		<mkdir dir="build/classes"/>
+		<java jar="src/sablecc.jar" fork="true">
+			<arg file="src/proj5.js"/>
+		</java>
+	</target>
+
+    <target name="compile">
+        <javac srcdir="src" destdir="build/classes" includeantruntime="false"/>
+    </target>
+
+    <target name="run">
+      	<move file="src/ProjFour/lexer/lexer.dat" todir="build/classes/ProjFour/lexer"/>
+		<move file="src/ProjFour/parser/parser.dat" todir="build/classes/ProjFour/parser"/>
+   		<java classname="ProjFour.Main" classpath="build/classes">
+  			<arg value="testone.txt"/>
+			<arg value="testone.s"/>
+  		</java>
+    </target>
+
+  <target name="all">
+  <antcall target="clean"></antcall>
+	<antcall target="makeLexer"></antcall>
+	<antcall target="compile"></antcall>
+	<antcall target="run"></antcall>
+  </target>
+</project>
