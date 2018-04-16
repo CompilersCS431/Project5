@@ -7,7 +7,7 @@ Helpers
 	sp  = ' ';
 	digit = ['0'..'9'];
 	letter = ['a'..'z'] | ['A'..'Z'];
-	quote = 34;	
+	quote = 34;
 	alphanumeric = letter | digit;
 	anychars = [35 .. 255] | 32 | 9 | 13 | 10;
 	tab = 9;
@@ -15,7 +15,7 @@ Helpers
 	lf = 10;
 	hid = letter (letter | digit | '_')*;
 	hreal = (digit)+'.'(digit)+;
-	
+
 Tokens
 	tint = 'INT';
 	treal = 'REAL';
@@ -28,7 +28,7 @@ Tokens
 	else = 'ELSE';
 	increment = '++';
 	decrement = '--';
-	get = 'GET()';
+	get = 'GET';
 	new = 'NEW';
 	return = 'RETURN';
 	put = 'PUT';
@@ -62,8 +62,8 @@ Tokens
 	minus = '-';
 	multiply = '*';
 	divide = '/';
-	condlt = '<' | 60;
-	condgt = '>' | 62;
+	condlt = '<';
+	condgt = '>';
 	condeq = '==';
 	condneq = '!==';
 	condgeq = '>=';
@@ -71,16 +71,16 @@ Tokens
 	tdigit = digit;
 	tletter = letter;
 	anychars = quote anychars* quote;
-	
-			
-	
+
+
+
 Ignored Tokens
 	whitespace, spaces
 	;
 Productions
 	prog =
 		begin classmethodstmts end
-		;	
+		;
 	classmethodstmts =
 		{nonempty} classmethodstmts classmethodstmt
 		| {emptyproduction}
@@ -89,7 +89,7 @@ Productions
 		{classdecl} tclass id lcurly methodstmtseqs rcurly
 		| {typevarliststmt} type id lparen varlist rparen lcurly stmtseq rcurly
 		| {idlisttype} id optlidlist colon type semicolon
-		; 
+		;
 	methodstmtseqs =
 		{oneormore} methodstmtseqs methodstmtseq
 		| {emptyproduction}
@@ -97,20 +97,27 @@ Productions
 	methodstmtseq =
 		{typevarlist} type id lparen varlist rparen lcurly stmtseq rcurly
 		| {idtype} id optlidlist colon type semicolon
-		; 
+    | {assignstring} id optionalidarray assignment anychars semicolon
+    | {printstmt} put lparen id optionalidarray rparen semicolon
+    | {assignget} id optionalidarray assignment get lparen rparen semicolon
+    | {increment} id optionalidarray increment semicolon
+    | {decrement} id optionalidarray decrement semicolon
+    | {declobject} [firstid]:id optionalidarray assignment new [secondid]:id lparen rparen semicolon
+    | {assignboolean} id optionalidarray assignment boolean semicolon
+		;
 	stmtseq =
 		{oneormore} stmt stmtseq
 		| {emptyproduction}
-		; 
-	stmt = 
+		;
+	stmt =
 		{exprassignment} id optionalidarray assignment expr semicolon
 		| {expranychar} id optionalidarray assignment anychars semicolon
 		| {idlist} id optlidlist colon type optionalidarray semicolon
-    	| {ifboolean} if lparen boolean rparen then optionalelse 
-    	| {ifid} if lparen id rparen then optionalelse 
+    	| {ifboolean} if lparen boolid rparen then optionalelse
+    	//| {ifid} if lparen boolid rparen then optionalelse
 		| {while} while lparen boolean rparen lcurly stmtseq rcurly
 		| {for} for lparen optionaltype id assignment expr [firstsemicolon]:semicolon boolean [secondsemicolon]:semicolon orstmts rparen lcurly stmtseq rcurly
-		| {get} id optionalidarray assignment get semicolon
+		| {get} id optionalidarray assignment get lparen rparen semicolon
 		| {put} put lparen id optionalidarray rparen semicolon
 		| {increment} id optionalidarray increment semicolon
 		| {decrement} id optionalidarray decrement semicolon
@@ -118,15 +125,15 @@ Productions
 		| {idvarlisttwo} id lparen varlisttwo rparen semicolon
 		| {multiplevarlisttwo}[firstid]:id optionalidarray period [secondid]:id lparen varlisttwo rparen optlidvarlisttwo semicolon
 		| {return} return expr semicolon
-    	| {returnboolean} return boolean semicolon
+    //| {returnboolean} return boolean semicolon
 		| {idboolean} id optionalidarray assignment boolean semicolon
-		| {switch} switch  factor lcurly case lparen number rparen [firstcolon]:colon [firststmtseq]:stmtseq optlbreak optionalswitchcases default [secondcolon]:colon [secondstmtseq]:stmtseq rcurly
+		| {switch} switch[firstlparen]:lparen expr [firstrparen]:rparen lcurly case lparen number rparen [firstcolon]:colon [firststmtseq]:stmtseq optlbreak optionalswitchcases default [secondcolon]:colon [secondstmtseq]:stmtseq rcurly
 		;
 	optlidlist =
 		{commaidlist} comma id optlidlist
 		| {emptyproduction}
 		;
-  optionalelse = 
+  optionalelse =
     {noelse} lcurly stmtseq rcurly
     | {else} [firstlcurly]:lcurly [firststmtseq]:stmtseq
 			[firstrcurly]:rcurly else [secondlcurly]:lcurly [secondstmtseq]:stmtseq
@@ -147,30 +154,33 @@ Productions
 		;
 	optlidvarlisttwo =
 		{nonempty} period id lparen varlisttwo rparen optlidvarlisttwo
-		| {emptyproduction} 
+		| {emptyproduction}
 		;
 	optionaltype =
 		{type} type
 		| {emptyproduction}
-		; 
+		;
 	varlist =
 	    {multiple} id colon type optionalidarray commaidarray
-		| {single} id colon type optionalidarray
-		| {emptyproduction}  
+	//	| {single} id colon type optionalidarray
+		| {emptyproduction}
 		;
   commaidarray =
-		{optlcommaidarr} comma id colon type optionalidarray commaidarray
-		| {oneidarray} comma id colon type optionalidarray
-		; 
-	varlisttwo =
-		{multiple} commaexprstring expr 
-		| {single} expr
+		{optlcommaidarr} comma varlist
 		| {emptyproduction} 
-		; 
-	commaexprstring =
-	  	{optlcommaexprstr} commaexprstring expr comma 
-		| {single} expr comma
-	  	;  
+		;
+	varlisttwo =
+		{multiple} exprorbool morevarlisttwo
+		| {emptyproduction}
+		;
+  exprorbool =
+    expr
+    | {boolean} boolean 
+    ;
+	morevarlisttwo =
+    {optlcommaexprstr} comma varlisttwo
+		| {emptyproduction}
+	  	;
 	expr =
 		{multiple} expr addop term
     	| {single} term
@@ -184,11 +194,15 @@ Productions
 		| {minusfactor} minus factor
 		| {int} number
 		| {real} real
-		| {boolean} lparen boolean rparen 
-     	| {idarray} id optionalidarray
+		//| {boolean} lparen boolean rparen
+    | {idarray} arrayorid
 		| {idvarlisttwo} id lparen varlisttwo rparen
-		| {idarrvarlisttwo} [firstuniqueid]:id optionalidarray period [seconduniqueid]:id lparen 	varlisttwo rparen
+		| {idarrvarlisttwo} arrayorid period id lparen 	varlisttwo rparen
 		;
+  arrayorid =
+    {array} id lsquare number rsquare
+    | {id} id
+    ;
 	optionalidarray =
 		{array} lsquare number rsquare
 		| {emptyproduction}
@@ -198,33 +212,37 @@ Productions
 		| {false} false
 		| {condexpr} condexpr
 		;
-	condexpr = [firstexpr]:expr cond [secondexpr]:expr 
+  boolid = 
+    {boolean} boolean
+    | {id} id
+    ;
+	condexpr = [firstexpr]:expr cond [secondexpr]:expr
 		;
-	cond = 
-		{lt} condlt  
-		| {gt} condgt 
+	cond =
+		{lt} condlt
+		| {gt} condgt
 		|{equal} condeq
-		| {notequal} condneq 
-		| {geq} condgeq 
-		| {leq} condleq 		
+		| {notequal} condneq
+		| {geq} condgeq
+		| {leq} condleq
 		;
-	addop = 
-		{plus} plus 
+	addop =
+		{plus} plus
 		| {minus} minus
 		;
-	multop = 
-		{multiply} multiply 
+	multop =
+		{multiply} multiply
 		| {divide} divide
 		;
 	letterordigit =
-		{letter} tletter letterordigit 
+		{letter} tletter letterordigit
 		| {digit} tdigit letterordigit
 		;
-	type = 
-		{int} tint 
-		| {real} treal 
-		| {string} tstring 
-		| {bool} tbool 
-		| {void} tvoid 
+	type =
+		{int} tint
+		| {real} treal
+		| {string} tstring
+		| {bool} tbool
+		| {void} tvoid
 		| {id} id
 		;
