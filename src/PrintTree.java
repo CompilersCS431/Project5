@@ -5,9 +5,12 @@ import ProjFive.node.*;
 import java.util.*;
 
 public class PrintTree extends DepthFirstAdapter {
+	private SymbolTable symbolTable;
+	private Stack<String> stack;
 
 	public PrintTree() {
-		
+		symbolTable = new SymbolTable();
+		stack = new Stack<String>();
 	}
 
 	public void caseAProg(AProg node) {
@@ -151,10 +154,27 @@ public class PrintTree extends DepthFirstAdapter {
 
 	public void caseAExprassignmentStmt(AExprassignmentStmt node) {
 		node.getId().apply(this);
+		String id = stack.pop();
 		node.getOptionalidarray().apply(this);
+		if(stack.peek().equals("]"))
+		{
+			Stringbuilder sb = new StringBuilder();
+			sb.append(stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+		}
 		node.getAssignment().apply(this);
+		stack.pop();
 		node.getExpr().apply(this);
+		String expression = stack.pop();
 		node.getSemicolon().apply(this);
+		if(!stack.peek().equals(";"){
+			//show some kind of error
+			String e = "Expected semicolon but saw " + stack.peek() + " instead.";
+		}
+		else {
+			stack.pop();
+		}
 	}
 
 	public void caseAExpranycharStmt(AExpranycharStmt node) {
@@ -582,16 +602,6 @@ public class PrintTree extends DepthFirstAdapter {
 		node.getDivide().apply(this);
 	}
 
-	public void caseALetterLetterordigit(ALetterLetterordigit node) {
-		node.getTletter().apply(this);
-		node.getLetterordigit().apply(this);
-	}
-	
-	public void caseADigitLetterordigit(ADigitLetterordigit node) {
-		node.getTdigit().apply(this);
-		node.getLetterordigit().apply(this);
-	}
-
 	public void caseAIntType(AIntType node) {
 		node.getTint().apply(this);
 	}
@@ -613,209 +623,250 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAIdType(AIdType node) {
-		node.getId().apply(this);
+		node.getId().apply(this);		
 	}
 	
 	public void caseTTint(TTint node){
 		System.out.println("Type: " + node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTTreal(TTreal node){
 		System.out.println("Type: " + node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTTstring(TTstring node){
 		System.out.println("Type: " + node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void cseTTbool(TTbool node){
 		System.out.println("Type: " + node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTTvoid(TTvoid node){
 		System.out.println("Type: " + node.getText());
+		stack.push(node.getText());
 	}
 	public void caseTIf(TIf node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTThen(TThen node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTWhile(TWhile node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTElse(TElse node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTIncrement(TIncrement node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTDecrement(TDecrement node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTGet(TGet node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	public void caseTNew(TNew node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTReturn(TReturn node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTPut(TPut node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTFor(TFor node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTSwitch(TSwitch node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTBreak(TBreak node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTCase(TCase node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTDefault(TDefault node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTBegin(TBegin node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTEnd(TEnd node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTTrue(TTrue node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTFalse(TFalse node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTLparen(TLparen node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTRparen(TRparen node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTLsquare(TLsquare node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTRsqurae(TRsquare node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTLcurly(TLcurly node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTRcurly(TRcurly node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTPeriod(TPeriod node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTComma(TComma node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTSemicolon(TSemicolon node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTColon(TColon node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTAssignment(TAssignment node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTId(TId node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTNumber(TNumber node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTReal(TReal node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTPlus(TPlus node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTMinus(TMinus node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTMultiply(TMultiply node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTDivide(TDivide node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTCondlt(TCondlt node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTCondgt(TCondgt node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTCondeq(TCondeq node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTCondneq(TCondneq node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTCondgeq(TCondgeq node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 	
 	public void caseTcondleq(TCondleq node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
-	
-	public void caseTTdigit(TTdigit node){
-		System.out.println(node.getText());
-	}
-	
-	public void caseTTletter(TTletter node){
-		System.out.println(node.getText());
-	}
-	
+
 	public void caseTAnychars(TAnychars node){
 		System.out.println(node.getText());
+		stack.push(node.getText());
 	}
 }
 

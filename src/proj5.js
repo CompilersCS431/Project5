@@ -68,8 +68,6 @@ Tokens
 	condneq = '!==';
 	condgeq = '>=';
 	condleq = '<=';
-	tdigit = digit;
-	tletter = letter;
 	anychars = quote anychars* quote;
 
 
@@ -229,10 +227,6 @@ Productions
 	multop =
 		{multiply} multiply
 		| {divide} divide
-		;
-	letterordigit =
-		{letter} tletter letterordigit
-		| {digit} tdigit letterordigit
 		;
 	type =
 		{int} tint
