@@ -57,6 +57,16 @@ mul $t1 , $t2
 mflo $t0
 sw $t0 , var0
 
+//var++
+lw $t0 , var
+addi $t0 , $t0 , 1
+sw $t0 , var
+
+//var--
+lw $t0 , var
+addi $t0 , $t0 , 1
+sw $t0 , var
+
 //CONDITIONAL STATEMENTS
 // 1 = TRUE , 0 = FALSE
 //var0 = var1 > var2
@@ -171,7 +181,8 @@ code here
 
 run operation
 sw $t0 , init
-check condition
+beq condition , $zero , END_FOR_LOOP
+b START_FOR_LOOP
 END_FOR_LOOP:
 
 //while(condition)
@@ -180,5 +191,28 @@ START_WHILE_LOOP:
 
 code here
 
-check condiditon
+beq condition , $zero , END_WHILE_LOOP
+b START_WHILE_LOOP
 END_WHILE_LOOP:
+
+//SWITCH STATEMENTS
+//SWITCH(expression) case:... case:...
+*compute expression* *store value to $t0*
+$li $t1 , int1
+
+beq $t0 , $t1 , CASE_1
+b DEFAULT
+
+CASE_1:
+
+code here
+//if there's a break include:
+//b END_SWITCH
+END_CASE_1:
+
+DEFAULT:
+
+code here
+
+END_DEFAULT:
+END_SWITCH:
