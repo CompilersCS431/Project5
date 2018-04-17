@@ -16,11 +16,10 @@
     </target>
 
     <target name="run">
-      	<move file="src/ProjFour/lexer/lexer.dat" todir="build/classes/ProjFour/lexer"/>
-		<move file="src/ProjFour/parser/parser.dat" todir="build/classes/ProjFour/parser"/>
-   		<java classname="ProjFour.Main" classpath="build/classes">
+      	<move file="src/ProjFive/lexer/lexer.dat" todir="build/classes/ProjFive/lexer"/>
+		<move file="src/ProjFive/parser/parser.dat" todir="build/classes/ProjFive/parser"/>
+   		<java classname="ProjFive.Main" classpath="build/classes">
   			<arg value="testone.txt"/>
-			<arg value="testone.s"/>
   		</java>
     </target>
 
