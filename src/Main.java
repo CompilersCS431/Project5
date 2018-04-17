@@ -11,7 +11,7 @@ public class Main{
       for(int i= 0; i < arguments.length; i+=2) {
       
       try{
-            BufferedWriter write = new BufferedWriter(new FileWriter(arguments[i+1]));
+          //  BufferedWriter write = new BufferedWriter(new FileWriter(arguments[i+1]));
             Lexer lexer = new Lexer(new PushbackReader
                   (new InputStreamReader(new FileInputStream(arguments[i])), 1024));
 
