@@ -3,6 +3,7 @@ BEGIN
 	y : REAL;
 	z : STRING;	
 	
+	
 	REAL Method(g : INT, h : REAL, i : STRING){
 		x : REAL;
 		IF(x < 4.5)THEN{
@@ -46,6 +47,7 @@ BEGIN
 				}
 			}
 			RETURN h + i;
+			w : REAL[1];
 		}
 	}
 END

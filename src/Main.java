@@ -18,7 +18,9 @@ public class Main{
 			
             Parser parser = new Parser(lexer);	
             Start ast = parser.parse();
-			ast.apply(new PrintTree());
+			PrintTree t = new PrintTree();
+			ast.apply(t);
+			ast.apply(t);
             //write.write("It's valid!");
             //write.close();
       }

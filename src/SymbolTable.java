@@ -46,8 +46,8 @@ public class SymbolTable {
 			return true;
 		}
 		else {
-			//do something here if the variable has already been declared
-			return false;
+			globalVarTable.replace(m.getName(), m);
+			return true;
 		}
 	}
 

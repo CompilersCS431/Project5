@@ -153,37 +153,24 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAExprassignmentStmt(AExprassignmentStmt node) {
-		node.getId().apply(this);
-		String id = stack.pop();
+	//	String id, expr, array, assignment;
+		
+		node.getId().apply(this);	
 		node.getOptionalidarray().apply(this);
-		if(stack.peek().equals("]"))
-		{
-			Stringbuilder sb = new StringBuilder();
-			sb.append(stack.pop());
-			sb.insert(0, stack.pop());
-			sb.insert(0, stack.pop());
-		}
 		node.getAssignment().apply(this);
-		stack.pop();
 		node.getExpr().apply(this);
-		String expression = stack.pop();
 		node.getSemicolon().apply(this);
-		if(!stack.peek().equals(";"){
-			//show some kind of error
-			String e = "Expected semicolon but saw " + stack.peek() + " instead.";
-		}
-		else {
-			stack.pop();
-		}
 	}
 
 	public void caseAExpranycharStmt(AExpranycharStmt node) {
+	//	String id, array, assignment, anychars;
 		node.getId().apply(this);
 		node.getOptionalidarray().apply(this);
 		node.getAssignment().apply(this);
 		node.getAnychars().apply(this);
 		node.getSemicolon().apply(this);
-	}
+	
+	} 
 
 	public void caseAIdlistStmt(AIdlistStmt node) {
 		node.getId().apply(this);
@@ -386,22 +373,59 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAAssignmentOrstmts(AAssignmentOrstmts node) {
+		StringBuilder sb = new StringBuilder();
+
 		node.getId().apply(this);
 		node.getAssignment().apply(this);
 		node.getExpr().apply(this);
+
+		String expr = stack.pop();
+		sb.insert(0, expr);
+		sb.insert(0, stack.pop());
+		String id = stack.pop();
+		sb.insert(0, stack.pop());
+		if(symbolTable.contains(id)){
+			Variable v = symbolTable.getVar(id);
+			v.setValue(expr);
+			symbolTable.add(v);
+		}
+		else {
+			//print an error need to declare var
+		}
 	}
 
 	public void caseANonemptyOptlidvarlisttwo(ANonemptyOptlidvarlisttwo node) {
+		StringBuilder sb = new StringBuilder();
+
 		node.getPeriod().apply(this);
 		node.getId().apply(this);
 		node.getLparen().apply(this);
 		node.getVarlisttwo().apply(this);
 		node.getRparen().apply(this);
 		node.getOptlidvarlisttwo().apply(this);
+
+		if(stack.peek().equals("")){
+			stack.pop();
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			stack.push(sb.toString());
+		}
+		else {
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			stack.push(sb.toString());
+		}
+		
 	}
 	
 	public void caseAEmptyproductionOptlidvarlisttwo(AEmptyproductionOptlidvarlisttwo node) {
-		
+		stack.push("");
 	}
 
 	public void caseATypeOptionaltype(ATypeOptionaltype node) {
@@ -409,38 +433,84 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAEmptyproductionOptionaltype(AEmptyproductionOptionaltype node) {
-
+		stack.push("");
 	}
 
 	public void caseAMultipleVarlist(AMultipleVarlist node) {
+		StringBuilder sb = new StringBuilder();
+		
 		node.getId().apply(this);
 		node.getColon().apply(this);
 		node.getType().apply(this);
 		node.getOptionalidarray().apply(this);
 		node.getCommaidarray().apply(this);
+
+		sb.insert(0, stack.pop());
+		if(stack.peek().charAt(0).equals("[")){
+			StringBuilder temp = new StringBuilder();
+			temp.insert(0, stack.pop());
+			temp.insert(0, stack.pop());
+			String type = temp.toString();
+			temp.insert(0, stack.pop());
+			String id = stakc.pop();
+			temp.insert(0, id);
+			sb.insert(0, temp);
+			Variable v = new Variable(id, type);
+			if(!symbolTable.containsVar(v)){
+				symbolTable.addVar(v);
+			}
+			else {
+				//msg that var has been declared already
+			}
+		}
+		else {
+			String type = stack.pop();
+			sb.insert(0, type);
+			sb.insert(0, stack.pop());
+			String id = stack.pop();
+			sb.insert(0, id);
+			Variable v = new Variable(id, type);
+			if(!symbolTable.containsVar(v)){
+				symbolTable.addVar(v);
+			}
+			else {
+				//msg that var has been declared already
+			}
+		}
 	}
 	
 	public void caseAEmptyproductionVarlist(AEmptyproductionVarlist node) {
-		
+		stack.push("");
 	}
 
 	public void caseAOptlcommaidarrCommaidarray(AOptlcommaidarrCommaidarray node) {
+		StringBuilder sb = new StringBuilder();
 		node.getComma().apply(this);
 		node.getVarlist().apply(this);
+
+		sb.insert(0, stack.pop());
+		sb.insert(0, stack.pop());
+		stack.push(sb.toString());
 	}
 	
 	public void caseAEmptyproductionCommaidarray(AEmptyproductionCommaidarray node){
-		
+		stack.push("");
 	}
 
 	public void caseAMultipleVarlisttwo(AMultipleVarlisttwo node){
+		StringBuilder sb = new StringBuilder();
+
 		node.getExprorbool().apply(this);
 		node.getMorevarlisttwo().apply(this);
+
+		sb.insert(0, stack.pop());
+		sb.insert(0, stack.pop());
+		stack.push(sb.toString());
 	}
 	
 
 	public void caseAEmptyproductionVarlisttwo(AEmptyproductionVarlisttwo node) {
-		
+		stack.push("");
 	}
 	
 	public void caseAExprExprorbool(AExprExprorbool node) {
@@ -452,18 +522,34 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 	
 	public void caseAMultipleMorevarlisttwo(AMultipleMorevarlisttwo node) {
+		StringBuilder sb = new StringBuilder();
+
 		node.getComma().apply(this);
 		node.getVarlisttwo().apply(this);
+
+		while(!stack.peek().equals(",")){
+			sb.insert(0, stack.pop());
+		}
+
+		sb.insert(0, stack.pop());
+		stack.push(sb.toString());
 	}
 	
 	public void caseAEmptyproductionMorevarlisttwo(AEmptyproductionMorevarlisttwo node) {
-		
+		stack.push("");
 	}
 
 	public void caseAMultipleExpr(AMultipleExpr node) {
+		StringBuilder sb = new StringBuilder();
+
 		node.getExpr().apply(this);
 		node.getAddop().apply(this);
 		node.getTerm().apply(this);
+
+		sb.insert(0, stack.pop());
+		sb.insert(0, stack.pop());
+		sb.insert(0, stack.pop());
+		stack.push(sb.toString());
 	}
 
 	public void caseASingleExpr(ASingleExpr node) {
@@ -471,9 +557,16 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseATermmultopTerm(ATermmultopTerm node) {
+		StringBuilder sb = new StringBuilder();
+
 		node.getTerm().apply(this);
 		node.getMultop().apply(this);
 		node.getFactor().apply(this);
+
+		sb.insert(0, stack.pop());
+		sb.insert(0, stack.pop());
+		sb.insert(0, stack.pop());
+		stack.push(sb.toString());
 	}
 
 	public void caseAFactorTerm(AFactorTerm node) {
@@ -481,14 +574,28 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAParenexprFactor(AParenexprFactor node) {
+		StringBuilder sb = new StringBuilder();
+	
 		node.getLparen().apply(this);
 		node.getExpr().apply(this);
 		node.getRparen().apply(this);
+		
+		while(!sb.peek().equals("(")){
+			sb.insert(0, stack.pop());
+		}
+			sb.inset(0, stack.pop());
+
+			stack.push(sb.toString());
 	}
 
 	public void caseAMinusfactorFactor(AMinusfactorFactor node) {
+		StringBuilder sb = new StringBuilder();
 		node.getMinus().apply(this);
 		node.getFactor().apply(this);
+		
+		sb.insert(0, stack.pop());
+		sb.insert(0, stack.pop());
+		stack.push(sb.toString());
 	}
 
 	public void caseAIntFactor(AIntFactor node) {
@@ -504,26 +611,70 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 	
 	public void caseAIdvarlisttwoFactor(AIdvarlisttwoFactor node) {
+		StringBuilder sb = new StringBuilder();
+
 		node.getId().apply(this);
 		node.getLparen().apply(this);
 		node.getVarlisttwo().apply(this);
 		node.getRparen().apply(this);
+
+		if(stack.peek().equals(")")) {
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			stack.push(sb.toString());
+		}
+		else {
+			//do something
+		}
 	}
 
 	public void caseAIdarrvarlisttwoFactor(AIdarrvarlisttwoFactor node) {
+		StringBuilder sb = new StringBuilder(); 
+
 		node.getArrayorid().apply(this);
 		node.getPeriod().apply(this);
 		node.getId().apply(this);
 		node.getLparen().apply(this);
 		node.getVarlisttwo().apply(this);
 		node.getRparen().apply(this);
+
+		if(stack.peek().equals(")")){
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			stack.push(sb.toString());
+		}
+		else {
+			// do something here
+		}
+		
 	}
 	
 	public void caseAArrayArrayorid(AArrayArrayorid node){
+		StringBuilder sb = new StringBuilder();
+		
 		node.getId().apply(this);
 		node.getLsquare().apply(this);
 		node.getNumber().apply(this);
 		node.getRsquare().apply(this);
+
+		if(stack.peek("]")){
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+
+			stack.push(sb.toString());
+		}
+		else {
+			//do something here 
+		}
+
 	}
 	
 	public void caseAIdArrayorid(AIdArrayorid node) {
@@ -531,9 +682,20 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAArrayOptionalidarray(AArrayOptionalidarray node) {
+		StringBuilder sb = new StringBuilder();
 		node.getLsquare().apply(this);
 		node.getNumber().apply(this);
 		node.getRsquare().apply(this);
+
+		if(stack.peek().equals("]")){
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+			sb.insert(0, stack.pop());
+		}
+
+		System.out.println(sb.toString());
+
+		stack.push(sb.toString());
 	}
 
 	public void caseATrueBoolean(ATrueBoolean node) {
@@ -557,9 +719,15 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseACondexpr(ACondexpr node) {
+		StringBuilder sb = new StringBuilder();
 		node.getFirstexpr().apply(this);
 		node.getCond().apply(this);
 		node.getSecondexpr().apply(this);
+		sb.append(stack.pop());
+		sb.insert(0, stack.pop());
+		sb.insert(0, stack.pop());
+
+		stack.push(sb.toString());
 	}
 
 	public void caseALtCond(ALtCond node) {
@@ -627,27 +795,27 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 	
 	public void caseTTint(TTint node){
-		System.out.println("Type: " + node.getText());
+		System.out.println(node.getText());
 		stack.push(node.getText());
 	}
 	
 	public void caseTTreal(TTreal node){
-		System.out.println("Type: " + node.getText());
+		System.out.println(node.getText());
 		stack.push(node.getText());
 	}
 	
 	public void caseTTstring(TTstring node){
-		System.out.println("Type: " + node.getText());
+		System.out.println(node.getText());
 		stack.push(node.getText());
 	}
 	
 	public void cseTTbool(TTbool node){
-		System.out.println("Type: " + node.getText());
+		System.out.println(node.getText());
 		stack.push(node.getText());
 	}
 	
 	public void caseTTvoid(TTvoid node){
-		System.out.println("Type: " + node.getText());
+		System.out.println(node.getText());
 		stack.push(node.getText());
 	}
 	public void caseTIf(TIf node){
@@ -759,7 +927,7 @@ public class PrintTree extends DepthFirstAdapter {
 		stack.push(node.getText());
 	}
 	
-	public void caseTRsqurae(TRsquare node){
+	public void caseTRsquare(TRsquare node){
 		System.out.println(node.getText());
 		stack.push(node.getText());
 	}
