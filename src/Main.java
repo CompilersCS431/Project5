@@ -18,13 +18,17 @@ public class Main{
 			
             Parser parser = new Parser(lexer);	
             Start ast = parser.parse();
+			System.out.println("***PARSING***") ;
 			PrintTree t = new PrintTree();
+			System.out.println("***APPLYING T***") ;
 			ast.apply(t);
-			ast.apply(t);
+			//ast.apply(t);
             //write.write("It's valid!");
             //write.close();
+			System.out.println("I am not error") ;
       }
       catch(Exception e){ 
+			System.out.println("I am error") ;
 			System.out.println("NOT VALID: " + e.getMessage());
 			/*try {
 				BufferedWriter write = new BufferedWriter(new FileWriter(arguments[i+1]));

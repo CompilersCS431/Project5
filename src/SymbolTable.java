@@ -46,8 +46,8 @@ public class SymbolTable {
 			return true;
 		}
 		else {
-			globalVarTable.replace(m.getName(), m);
-			return true;
+			//already declared
+			return false;
 		}
 	}
 
