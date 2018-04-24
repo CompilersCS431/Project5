@@ -17,7 +17,10 @@ public class SecondPass extends DepthFirstAdapter {
         private int swtichCount ;
         private int varCount ;
         private int openRegs ; 
+        private int lastInReg = 0 ;
+        private int lastOutReg = 0 ;
         private boolean[] regStatus = {false , false , false , false , false , false , false , false} ;
+        private boolean[] outRegStatus = {false , false , false , false , false , false , false , false} ;
 
 	public SecondPass(SymbolTable st) {
             symbolTable = st ;
@@ -597,23 +600,61 @@ public class SecondPass extends DepthFirstAdapter {
 		node.getExpr().apply(this);
                 String peekExpr = stack.peek();
                 
+                Variable v ;
+                
                 if(peekType.equals("")){
-                    Variable v = symbolTable.getVar(peekId);
+                    v = symbolTable.getVar(peekId);
                     v.setValue(peekExpr);
                     symbolTable.addVar(v);
                 }
                 else {
-                    Variable v = new Variable(peekId, peekType, peekExpr);
+                    v = new Variable(peekId, peekType, peekExpr);
                     symbolTable.addVar(v);
                 }
                 
+                codePart = codePart + "lw $t" + lastInReg + " , " + v.getName() + "\n" ;
+                String conditionName = "condition_for_" + forCount ;
+                declareVar(conditionName , "BOOLEAN") ;
 		node.getFirstsemicolon().apply(this);
-		node.getBoolean().apply(this);
+		
+                int preBoolLength = codePart.length() ;
+                //trust this returns correct code
+                node.getBoolean().apply(this);
+                
+                String boolCode = codePart.substring(preBoolLength , codePart.length()) ;
+                
+                codePart = codePart + "sw $s" + lastOutReg + " , " + conditionName + "\n" ;
+                
 		node.getSecondsemicolon().apply(this);
-		node.getOrstmts().apply(this);
+		
+                int preOrLen = codePart.length() ;
+                
+                node.getOrstmts().apply(this);
+                
+                String orCode = codePart.substring(preOrLen , codePart.length()) ;
+                codePart = codePart.substring(0 , preOrLen) ;
+                
 		node.getRparen().apply(this);
 		node.getLcurly().apply(this);
+                
+                //Generate beginning for loop code
+                codePart = codePart + "START_FOR_LOOP_" + forCount + ":\n" ;
+                codePart = codePart + "lw $t" + lastInReg + " , " + v.getName() + "\n" ;
+                
 		node.getStmtseq().apply(this);
+                
+                //Generate end for loop code
+                codePart = codePart + "sw $t" + lastInReg + " , " + v.getName() + "\n" ;
+                codePart = codePart + orCode ;
+                codePart = codePart + boolCode ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + conditionName + "\n" ;
+                codePart = codePart + "lw $t0 , " + conditionName + "\n";
+                codePart = codePart + "beq $t0 , $zero , END_FOR_LOOP_" + forCount + "\n" ;
+                codePart = codePart + "b START_FOR_LOOP_" + forCount + "\n" ;
+                codePart = codePart + "END_FOR_LOOP_" + forCount + ":\n" ;
+                forCount ++ ;
+                //take care of registers or something.
+                
 		node.getRcurly().apply(this);
 		
 		String rcurly = stack.pop();
@@ -700,6 +741,16 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("increment stmt " + temp );
 		stack.push(temp);
 		temp = "";
+                
+                lastInReg = getOpenInReg(lastInReg) ;
+                lastOutReg = getOpenOutReg(lastOutReg) ;
+                
+                codePart = codePart + "lw $t" + lastInReg + " , " + id + "\n" ;
+                codePart = codePart + "addi $s" + lastOutReg + " , $t" + lastInReg + " , 1 \n" ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + id + "\n" ;
+                
+                freeInReg(lastInReg) ;
+                freeOutReg(lastOutReg) ;       
 	}
 
 	public void caseADecrementStmt(ADecrementStmt node) {
@@ -717,6 +768,16 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("decrement stmt " + temp );
 		stack.push(temp);
 		temp = "";
+                
+                lastInReg = getOpenInReg(lastInReg) ;
+                lastOutReg = getOpenOutReg(lastOutReg) ;
+                
+                codePart = codePart + "lw $t" + lastInReg + " , " + id + "\n" ;
+                codePart = codePart + "subi $s" + lastOutReg + " , $t" + lastInReg + " , 1 \n" ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + id + "\n" ;
+                
+                freeInReg(lastInReg) ;
+                freeOutReg(lastOutReg) ;      
 
 	}
 
@@ -994,6 +1055,16 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("increment " + temp );
 		stack.push(temp);
 		temp = "";
+                
+                lastInReg = getOpenInReg(lastInReg) ;
+                lastOutReg = getOpenOutReg(lastOutReg) ;
+                
+                codePart = codePart + "lw $t" + lastInReg + " , " + id + "\n" ;
+                codePart = codePart + "addi $s" + lastOutReg + " , $t" + lastInReg + " , 1 \n" ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + id + "\n" ;
+                
+                freeInReg(lastInReg) ;
+                freeOutReg(lastOutReg) ;
 	}
 
 	public void caseADecrementOrstmts(ADecrementOrstmts node) {
@@ -1008,6 +1079,15 @@ public class SecondPass extends DepthFirstAdapter {
 		stack.push(temp);
 		temp = "";
 
+                lastInReg = getOpenInReg(lastInReg) ;
+                lastOutReg = getOpenOutReg(lastOutReg) ;
+                
+                codePart = codePart + "lw $t" + lastInReg + " , " + id + "\n" ;
+                codePart = codePart + "subi $s" + lastOutReg + " , $t" + lastInReg + " , 1 \n" ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + id + "\n" ;
+                
+                freeInReg(lastInReg) ;
+                freeOutReg(lastOutReg) ;
 	}
 
 	public void caseAAssignmentOrstmts(AAssignmentOrstmts node) {
@@ -1616,6 +1696,9 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("truebool " + temp);
 		stack.push(temp);
 		temp = "";
+                
+                codePart = codePart + "li $s" + lastOutReg + " , 1 \n" ;
+                
 	}
 
 	public void caseAFalseBoolean(AFalseBoolean node) {
@@ -1624,6 +1707,8 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("falsebool " + temp);
 		stack.push(temp);
 		temp = "";
+                
+                codePart = codePart + "li $s" + lastOutReg + " , 0 \n" ;
 	}
 
 	public void caseACondexprBoolean(ACondexprBoolean node) {
@@ -1632,6 +1717,12 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("condexprboolean " + temp );
 		stack.push(temp);
 		temp = "";
+                
+                codePart = codePart + "move $s" + (lastOutReg + 1) + " , $s" + lastOutReg + "\n" ;
+                outRegStatus[lastOutReg] = false ;
+                lastOutReg ++ ;
+                outRegStatus[lastOutReg] = true ;
+                
 	}
 	
 	public void caseABooleanBoolid(ABooleanBoolid node) {
@@ -1656,8 +1747,13 @@ public class SecondPass extends DepthFirstAdapter {
             boolean b = false ; 
             */
             node.getFirstexpr().apply(this);
+            //get first exp and store it to a register
+            
             node.getCond().apply(this);
+            
+           
             node.getSecondexpr().apply(this);
+            //get second exp and store it to a register
 
             String secondexpr = stack.pop();
             String cond = stack.pop();
@@ -2251,6 +2347,97 @@ public class SecondPass extends DepthFirstAdapter {
         public static boolean isNumeric(String str)
         {
           return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
+        }
+        
+        public int getOpenInReg(int reg)
+        {
+            int count = 0 ; 
+            if(!regStatus[reg])
+            {
+                return reg ;
+            }
+            else
+            {
+                while(regStatus[reg])
+                {
+                    reg++ ;
+                    if(reg > 7)
+                    {
+                        reg = 0 ;
+                        count++ ;
+                        if(count == 1)
+                        {
+                            System.out.println("REGISTER ERROR") ;
+                            return -1 ;
+                        }
+                                
+                    }
+                }
+            }
+            return reg ;
+        }
+        
+        public int getOpenOutReg(int reg)
+        {
+            int count = 0 ; 
+            if(!outRegStatus[reg])
+            {
+                return reg ;
+            }
+            else
+            {
+                while(outRegStatus[reg])
+                {
+                    reg++ ;
+                    if(reg > 7)
+                    {
+                        reg = 0 ;
+                        count++ ;
+                        if(count == 1)
+                        {
+                            System.out.println("REGISTER ERROR") ;
+                            return -1 ;
+                        }
+                                
+                    }
+                }
+            }
+            return reg ;
+        }
+        
+        public void freeInReg(int reg)
+        {
+            regStatus[reg] = false ;
+            int count = 0 ;
+            while(regStatus[count])
+            {
+                count++ ;
+            }
+            if(count == 0)
+            {
+                lastInReg = count ;
+            }
+            else
+            {
+                lastInReg = count - 1 ;
+            }
+        }
+        public void freeOutReg(int reg)
+        {
+            outRegStatus[reg] = false ;
+            int count = 0 ;
+            while(outRegStatus[count])
+            {
+                count++ ;
+            }
+            if(count == 0)
+            {
+                lastOutReg = count ;
+            }
+            else
+            {
+                lastOutReg = count - 1 ;
+            }
         }
 
 }
