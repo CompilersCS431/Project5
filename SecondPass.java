@@ -55,7 +55,7 @@ public class SecondPass extends DepthFirstAdapter {
                     v = (Variable) (m.get(key));
                     type = v.getType();
                     if(type.equals("STRING")){
-                        dataPart = dataPart + key + ": .asciiz " + v.getValue() + "\n .align 2 \n" ;
+                        dataPart = dataPart + key + ": .asciiz " + v.getValue() + "\n.align 2 \n" ;
                     }
                     else {
                         declareVar(key, type);
@@ -118,7 +118,7 @@ public class SecondPass extends DepthFirstAdapter {
 		String lparen = stack.pop();
 		String id = stack.pop();
 		String type = stack.pop();
-                
+ /*               
                 Method m = symbolTable.getMethod(id);
                 HashMap para = m.getParams() ;
                 Set<String> keys = para.keySet() ;
@@ -226,7 +226,7 @@ public class SecondPass extends DepthFirstAdapter {
 		String lparen = stack.pop();
 		String id = stack.pop();
 		String type = stack.pop();
-                
+/*                
                 Method m = symbolTable.getMethod(id) ;
                 Set<String> keys = m.getParams().keySet() ;
                 String mName = id + "_" ;
@@ -234,7 +234,7 @@ public class SecondPass extends DepthFirstAdapter {
                 {
                     Variable v = m.getVar(key) ;
                     declareVar(mName + v.getName() , v.getType()) ;
-                }
+                }*/
                 
 		temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly ;
 		//System.out.println("Typevarlist methodstmtseq " + temp );
@@ -485,7 +485,7 @@ public class SecondPass extends DepthFirstAdapter {
                     }
                 }
                 
-                codePart = codePart + "li $t0 , " + expr + "\n sw $t0 , " + id + "\n" ;
+                codePart = codePart + "li $t0 , " + expr + "\nsw $t0 , " + id + "\n" ;
 		
 		temp = id + arr + assignment + expr + semicolon ;
 		//System.out.println("assignment stmt " + temp);
@@ -648,7 +648,14 @@ public class SecondPass extends DepthFirstAdapter {
                 //Generate end for loop code
                 codePart = codePart + "sw $t" + lastInReg + " , " + v.getName() + "\n" ;
                 codePart = codePart + orCode ;
-                codePart = codePart + boolCode ;
+                
+                String bc1 = "_"+(boolCount - 1) ;
+                boolCount++ ;
+                String bc2 = "_"+(boolCount - 1) ;
+                
+                String boolCode2 = boolCode.replaceAll(bc1 , bc2) ;
+                
+                codePart = codePart + boolCode2 ;
                 codePart = codePart + "sw $s" + lastOutReg + " , " + conditionName + "\n" ;
                 codePart = codePart + "lw $t0 , " + conditionName + "\n";
                 codePart = codePart + "beq $t0 , $zero , END_FOR_LOOP_" + forCount + "\n" ;
@@ -1241,9 +1248,35 @@ public class SecondPass extends DepthFirstAdapter {
             int iExp = Integer.MAX_VALUE, iTerm = Integer.MAX_VALUE, ival = Integer.MAX_VALUE;
             double dExp = Double.MAX_VALUE, dTerm = Double.MAX_VALUE, dval = Double.MAX_VALUE;
             node.getExpr().apply(this);
+            
+            int firstExpReg = lastOutReg ;
+            lastInReg = getOpenInReg(lastInReg) ;
+            int firstExpTemp = lastInReg ;
+            
             node.getAddop().apply(this);
+            String operator = stack.peek() ;
+            
             node.getTerm().apply(this);
+            
+            int secondExpReg = lastOutReg ;
+            lastInReg = getOpenInReg(lastInReg) ;
+            int secondExpTemp = lastInReg ;
 
+            codePart = codePart + "move $t" + firstExpTemp + " , $s" + firstExpReg + "\n" ;
+            codePart = codePart + "move $t" + secondExpTemp + " , $s" + secondExpReg + "\n" ;
+
+            if(operator.equals("+"))
+            {
+                codePart = codePart + "add $s" + lastOutReg + " , $t" + firstExpTemp + " , $t" + secondExpTemp + "\n" ;
+            }
+            else if(operator.equals("-"))
+            {
+                codePart = codePart + "sub $s" + lastOutReg + " , $t" + firstExpTemp + " , $t" + secondExpTemp + "\n" ;
+            }
+            
+            freeInReg(secondExpTemp) ;
+            freeInReg(firstExpTemp) ;
+            
             String term = stack.pop();
             String addop = stack.pop();
             String expr = stack.pop();
@@ -1384,13 +1417,38 @@ public class SecondPass extends DepthFirstAdapter {
             /* int iFact = Integer.MAX_VALUE, iTerm = Integer.MAX_VALUE, ival = Integer.MAX_VALUE ;
             double dFact = Double.MAX_VALUE, dTerm = Double.MAX_VALUE, dval = Double.MAX_VALUE ;*/
             node.getTerm().apply(this);
+            
+            int firstTermReg = lastOutReg ;
+            lastInReg = getOpenInReg(lastInReg) ;
+            int firstTermTemp = lastInReg ;
+            
             node.getMultop().apply(this);
+            String operator = stack.peek() ;
+            
             node.getFactor().apply(this);
+            
+            int secondTermReg = lastOutReg ;
+            lastInReg = getOpenInReg(lastInReg) ;
+            int secondTermTemp = lastInReg ;
+            
+            codePart = codePart + "move $t" + firstTermTemp + " , $s" + firstTermReg + "/n" ;
+            codePart = codePart + "move $t" + secondTermReg + " , $s" + secondTermReg + "/n" ;
+            
+            if(operator.equals("*"))
+            {
+                codePart = codePart + "mul $t" + firstTermTemp + " , $t" + secondTermTemp + "\n" ;
+            }
+            else if(operator.equals("/"))
+            {
+                codePart = codePart + "div $t" + firstTermTemp + " , $t" + secondTermTemp + "\n" ;
+            }
+            
+            codePart = codePart + "mflo $s" + lastOutReg + "\n" ;
 
             String factor = stack.pop();
             String mult = stack.pop();
             String term = stack.pop();
-
+           
             /* try
             {
             iFact = Integer.parseInt(factor);
@@ -1529,6 +1587,8 @@ public class SecondPass extends DepthFirstAdapter {
             String factor = stack.pop();
             String minus = stack.pop();
 
+            codePart = codePart + "neg $s" + lastOutReg + " , $s" + lastOutReg + "\n" ;
+            
             /*  try
             {
             iFact = Integer.parseInt(factor);
@@ -1571,8 +1631,11 @@ public class SecondPass extends DepthFirstAdapter {
 		node.getNumber().apply(this);
 		temp = stack.pop();
 		//System.out.println("intFactor " + temp);
-		stack.push(temp);
-		temp = "";
+		stack.push(temp) ;
+                
+                lastOutReg = getOpenOutReg(lastOutReg) ;
+                codePart = codePart + "li $s" + lastOutReg + " , " + temp + "\n" ;
+                temp = "" ;
 	}
 
 	public void caseARealFactor(ARealFactor node) {
@@ -1588,13 +1651,8 @@ public class SecondPass extends DepthFirstAdapter {
 		
 		temp = stack.pop();
                 
-                int regNum = 0 ;
-                while(regStatus[regNum])
-                {
-                    regNum ++ ;
-                }
-                regStatus[regNum] = true ;
-                openRegs-- ;
+                lastInReg = getOpenInReg(lastInReg) ;
+                int regNum = lastInReg ;
                 
                 String reg = "$t" + regNum ;
                 
@@ -1604,6 +1662,8 @@ public class SecondPass extends DepthFirstAdapter {
 		stack.push(temp);
    
 		temp = "";
+                
+                freeInReg(regNum) ;
 	}
 	
 	public void caseAIdvarlisttwoFactor(AIdvarlisttwoFactor node) {
@@ -1721,10 +1781,9 @@ public class SecondPass extends DepthFirstAdapter {
 		temp = "";
                 
                 codePart = codePart + "move $s" + (lastOutReg + 1) + " , $s" + lastOutReg + "\n" ;
-                outRegStatus[lastOutReg] = false ;
-                lastOutReg ++ ;
-                outRegStatus[lastOutReg] = true ;
-                
+                int out = lastOutReg++ ;
+                freeOutReg(lastOutReg) ;
+                getOpenOutReg(out) ;
 	}
 	
 	public void caseABooleanBoolid(ABooleanBoolid node) {
@@ -2388,7 +2447,7 @@ public class SecondPass extends DepthFirstAdapter {
                     }
                     else if(type.equals("STRING"))
                     {
-                        dataPart = dataPart + name + ": .asciiz \n .align 2 \n" ;
+                        dataPart = dataPart + name + ": .asciiz \n.align 2 \n" ;
                     }
                     else
                     {
@@ -2454,11 +2513,16 @@ public class SecondPass extends DepthFirstAdapter {
                     }
                 }
             }
-            return reg ;
+            return reg ;       
         }
         
         public void freeInReg(int reg)
         {
+            if(reg > 7)
+            {
+                System.out.println("REGISTER ERROR") ;
+                return ;
+            }
             regStatus[reg] = false ;
             int count = 0 ;
             while(regStatus[count])
@@ -2476,6 +2540,11 @@ public class SecondPass extends DepthFirstAdapter {
         }
         public void freeOutReg(int reg)
         {
+            if(reg > 7)
+            {
+                System.out.println("REGISTER ERROR") ;
+                return ;
+            }
             outRegStatus[reg] = false ;
             int count = 0 ;
             while(outRegStatus[count])
