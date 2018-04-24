@@ -21,7 +21,7 @@ public class SecondPass extends DepthFirstAdapter {
 
 	public SecondPass(SymbolTable st) {
             symbolTable = st ;
-            stack = new Stack<String>();
+            stack = new Stack<>();
             temp = new String();
             ifCount = 0 ;
             forCount = 0 ;
@@ -427,6 +427,38 @@ public class SecondPass extends DepthFirstAdapter {
 		String assignment = stack.pop();
 		String arr = stack.pop();
 		String id = stack.pop();
+                
+                if(isNumeric(expr)){
+                    try 
+                    {
+                        int i = Integer.parseInt(expr);
+                        if(symbolTable.containsVar(id)){
+                            Variable v = symbolTable.getVar(id);
+                            v.setValue(expr);
+                            symbolTable.addVar(v);
+                        }
+                    } 
+                    catch (NumberFormatException e) {
+                        try 
+                        {
+                            double d = Double.parseDouble(expr);
+                            if(symbolTable.containsVar(id)){
+                            Variable v = symbolTable.getVar(id);
+                            v.setValue(expr);
+                            symbolTable.addVar(v);
+                        }
+
+                        } 
+                        catch (NumberFormatException e2) {
+                            if(symbolTable.containsVar(id)){
+                                Variable v = symbolTable.getVar(id);
+                                v.setValue(expr);
+                                symbolTable.addVar(v);
+                            }
+                        }
+            
+                    }
+                }
                 
                 codePart = codePart + "li $t0 , " + expr + "\n sw $t0 , " + id + "\n" ;
 		
@@ -1079,37 +1111,137 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseAMultipleExpr(AMultipleExpr node) {
-		node.getExpr().apply(this);
-		node.getAddop().apply(this);
-		node.getTerm().apply(this);
-		
-		String term = stack.pop();
-		String addop = stack.pop();
-		String expr = stack.pop();
-		
-                int regNum = 0 ;
-                while(regStatus[regNum])
+            int iExp = Integer.MAX_VALUE, iTerm = Integer.MAX_VALUE, ival = Integer.MAX_VALUE;
+            double dExp = Double.MAX_VALUE, dTerm = Double.MAX_VALUE, dval = Double.MAX_VALUE;
+            node.getExpr().apply(this);
+            node.getAddop().apply(this);
+            node.getTerm().apply(this);
+
+            String term = stack.pop();
+            String addop = stack.pop();
+            String expr = stack.pop();
+
+            //check if the expression has a value
+            try 
+            {
+                iExp = Integer.parseInt(expr);
+
+            } 
+            catch (NumberFormatException e) {
+                try 
                 {
-                    regNum ++ ;
+                    dExp = Double.parseDouble(expr);
                 }
-                regStatus[regNum] = true ;
-                openRegs-- ;
-                
-                String reg = "$t" + regNum ;
-                
-                if(addop.equals("+"))
+                catch (NumberFormatException e2) {
+                    if(symbolTable.containsVar(expr)){
+                        Variable v = symbolTable.getVar(expr);
+                        if(v.getType().equals("INT")){
+                            String value = v.getValue();
+                            iExp = Integer.parseInt(value);
+                        }
+                        else if(v.getType().equals("REAL")) {
+                            dExp = Double.parseDouble(v.getValue());
+                        }
+                    }
+                }
+
+            }
+            
+            //check if the term has a value
+            try 
+            {
+                iTerm = Integer.parseInt(term);
+
+            } 
+            catch (NumberFormatException e) {
+                try 
                 {
-                    codePart = codePart + "add " + " " + reg + " , " + "$t0 , $t1 \n" ;
+                    dTerm = Double.parseDouble(term);
                 }
-                else
+                catch (NumberFormatException e2) {
+                    if(symbolTable.containsVar(term)){
+                        Variable v = symbolTable.getVar(term);
+                        if(v.getType().equals("INT")){
+                            String value = v.getValue();
+                            iTerm = Integer.parseInt(value);
+                        }
+                        else if(v.getType().equals("REAL")) {
+                            dTerm = Double.parseDouble(v.getValue());
+                        }
+                    }
+                }
+
+            }
+
+            if(addop.equals("+"))
+            {
+                if(iTerm < Integer.MAX_VALUE && iExp < Integer.MAX_VALUE)
                 {
-                    codePart = codePart + "sub " + " " + reg + " , " + "$t0 , $t1 \n" ;
+                    ival = iExp + iTerm;
                 }
-                
-		temp = expr + addop + term ;
-		//System.out.println("MultipleExpr " + temp);
-		stack.push(temp);
-		temp = "";
+                else if(iTerm < Integer.MAX_VALUE && dExp < Double.MAX_VALUE)
+                {
+                    dval =  dExp + iTerm;
+                }
+                else if(dTerm < Double.MAX_VALUE && dExp < Double.MAX_VALUE)
+                {
+                    dval = dExp + dTerm ;
+                }
+                else if(dTerm < Integer.MAX_VALUE && iExp < Integer.MAX_VALUE)
+                {
+                    dval = dExp + iTerm ;
+                }
+            }
+            else if (addop.equals("-"))
+            {
+                if(iTerm < Integer.MAX_VALUE && iExp < Integer.MAX_VALUE)
+                {
+                    ival = iExp - iTerm ;
+                }
+                else if(iTerm < Integer.MAX_VALUE && dExp < Double.MAX_VALUE)
+                {
+                    dval = dExp - iTerm;
+                }
+                else if(dTerm < Double.MAX_VALUE && dExp < Double.MAX_VALUE)
+                {
+                    dval = dExp - dTerm;
+                }
+                else if(dTerm < Double.MAX_VALUE && iExp < Integer.MAX_VALUE)
+                {
+                    dval = iExp - iTerm ;
+                }
+            }
+            
+            if(dval < Double.MAX_VALUE){
+                temp = dval + "";
+            }
+            else if(ival < Integer.MAX_VALUE){
+                temp = ival + "";
+            }
+/*
+            int regNum = 0 ;
+            while(regStatus[regNum])
+            {
+                regNum ++ ;
+            }
+            regStatus[regNum] = true ;
+            openRegs-- ;
+
+            String reg = "$t" + regNum ;
+
+            if(addop.equals("+"))
+            {
+                codePart = codePart + "add " + " " + reg + " , " + "$t0 , $t1 \n" ;
+            }
+            else
+            {
+                codePart = codePart + "sub " + " " + reg + " , " + "$t0 , $t1 \n" ;
+            }
+*/
+            //temp = expr + addop + term ;
+            //System.out.println("MultipleExpr " + temp);
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseASingleExpr(ASingleExpr node) {
@@ -1122,18 +1254,117 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseATermmultopTerm(ATermmultopTerm node) {
-		node.getTerm().apply(this);
-		node.getMultop().apply(this);
-		node.getFactor().apply(this);
+            int iFact = Integer.MAX_VALUE, iTerm = Integer.MAX_VALUE, ival = Integer.MAX_VALUE ;
+            double dFact = Double.MAX_VALUE, dTerm = Double.MAX_VALUE, dval = Double.MAX_VALUE ;
+            node.getTerm().apply(this);
+            node.getMultop().apply(this);
+            node.getFactor().apply(this);
 
-		String factor = stack.pop();
-		String mult = stack.pop();
-		String term = stack.pop();
-		
-		temp = term + mult + factor;
-		//System.out.println("TermMultop " + temp);
-		stack.push(temp);
-		temp = "";
+            String factor = stack.pop();
+            String mult = stack.pop();
+            String term = stack.pop();
+
+            try 
+            {
+                iFact = Integer.parseInt(factor);
+
+            } 
+            catch (NumberFormatException e) {
+                try 
+                {
+                    dFact = Double.parseDouble(factor);
+                }
+                catch (NumberFormatException e2) {
+                    if(symbolTable.containsVar(factor)){
+                        Variable v = symbolTable.getVar(factor);
+                        if(v.getType().equals("INT")){
+                            String value = v.getValue();
+                            iFact = Integer.parseInt(value);
+                        }
+                        else if(v.getType().equals("REAL")) {
+                            dFact = Double.parseDouble(v.getValue());
+                        }
+                    }
+                }
+
+            }
+            
+            //check if the term has a value
+            try 
+            {
+                iTerm = Integer.parseInt(term);
+
+            } 
+            catch (NumberFormatException e) {
+                try 
+                {
+                    dTerm = Double.parseDouble(term);
+                }
+                catch (NumberFormatException e2) {
+                    if(symbolTable.containsVar(term)){
+                        Variable v = symbolTable.getVar(term);
+                        if(v.getType().equals("INT")){
+                            String value = v.getValue();
+                            iTerm = Integer.parseInt(value);
+                        }
+                        else if(v.getType().equals("REAL")) {
+                            dTerm = Double.parseDouble(v.getValue());
+                        }
+                    }
+                }
+
+            }
+            
+            if(mult.equals("*"))
+            {
+                if(iTerm < Integer.MAX_VALUE && iFact < Integer.MAX_VALUE)
+                {
+                    ival = iTerm * iFact;
+                }
+                else if(iTerm < Integer.MAX_VALUE && dFact < Double.MAX_VALUE)
+                {
+                    dval =  iTerm * dFact;
+                }
+                else if(dTerm < Double.MAX_VALUE && dFact < Double.MAX_VALUE)
+                {
+                    dval = dTerm * dFact;
+                }
+                else if(dTerm < Integer.MAX_VALUE && iFact < Integer.MAX_VALUE)
+                {
+                    dval = iTerm * iFact;
+                }
+            }
+            else if (mult.equals("/"))
+            {
+                if(iTerm < Integer.MAX_VALUE && iFact < Integer.MAX_VALUE)
+                {
+                    ival = iTerm / iFact ;
+                }
+                else if(iTerm < Integer.MAX_VALUE && dFact < Double.MAX_VALUE)
+                {
+                    dval = iTerm / dFact;
+                }
+                else if(dTerm < Double.MAX_VALUE && dFact < Double.MAX_VALUE)
+                {
+                    dval = dTerm / dFact;
+                }
+                else if(dTerm < Double.MAX_VALUE && iFact < Integer.MAX_VALUE)
+                {
+                    dval =  iTerm / iFact ;
+                }
+            }
+            
+            if(dval < Double.MAX_VALUE){
+                temp = dval + "";
+            }
+            else if(ival < Integer.MAX_VALUE){
+                temp = ival + "";
+            }
+
+            //temp = term + mult + factor;
+            //System.out.println("TermMultop " + temp);
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAFactorTerm(AFactorTerm node) {
@@ -1156,22 +1387,57 @@ public class SecondPass extends DepthFirstAdapter {
 		String lparen = stack.pop();
 		temp = lparen + expr + rparen;
 		//System.out.println("ParenexprFactor " + temp );
-		stack.push(temp);
+		stack.push(expr);
 		temp = "";
 
 	}
 
 	public void caseAMinusfactorFactor(AMinusfactorFactor node) {
-		node.getMinus().apply(this);
-		node.getFactor().apply(this);
-		
-		String factor = stack.pop();
-		String minus = stack.pop();
-		
-		temp = minus + factor ;
-		//System.out.println("minusfactor " + temp);
-		stack.push(temp);
-		temp = "";
+            int iFact = Integer.MAX_VALUE ;
+            double dFact = Double.MAX_VALUE ;
+            
+            node.getMinus().apply(this);
+            node.getFactor().apply(this);
+
+            String factor = stack.pop();
+            String minus = stack.pop();
+
+            try 
+            {
+                iFact = Integer.parseInt(factor);
+                iFact = 0 - iFact ;
+                temp = iFact + "";
+            } 
+            catch (NumberFormatException e) {
+                try 
+                {
+                    dFact = Double.parseDouble(factor);
+                    dFact = 0 - dFact ;
+                    temp = dFact + "";
+                }
+                catch (NumberFormatException e2) {
+                    if(symbolTable.containsVar(factor)){
+                        Variable v = symbolTable.getVar(factor);
+                        if(v.getType().equals("INT")){
+                            String value = v.getValue();
+                            iFact = Integer.parseInt(value);
+                            iFact = 0 - iFact ;
+                            temp = iFact + "";
+                        }
+                        else if(v.getType().equals("REAL")) {
+                            dFact = Double.parseDouble(v.getValue());
+                            dFact = 0 - dFact ;
+                            temp = dFact + "";
+                        }
+                    }
+                }
+
+            }              
+  
+            //temp = minus + factor ;
+            //System.out.println("minusfactor " + temp);
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAIntFactor(AIntFactor node) {
@@ -1206,8 +1472,10 @@ public class SecondPass extends DepthFirstAdapter {
                 String reg = "$t" + regNum ;
                 
                 codePart = codePart + "lw " + reg + " , " + temp + "\n" ;
+                String mipsCode = "lw " + reg + " , " + temp + "\n";
 		//System.out.println("IdarrayFactor " + temp );
 		stack.push(temp);
+   
 		temp = "";
 	}
 	
@@ -1345,7 +1613,7 @@ public class SecondPass extends DepthFirstAdapter {
 		String secondexpr = stack.pop();
 		String cond = stack.pop();
 		String firstexpr = stack.pop();
-		
+                
 		temp = firstexpr + cond + secondexpr ;
 		//System.out.println("condexpr : " + temp);
 		stack.push(temp);
@@ -1355,130 +1623,130 @@ public class SecondPass extends DepthFirstAdapter {
 
 	public void caseALtCond(ALtCond node) {
 		node.getCondlt().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("cond " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAGtCond(AGtCond node) {
 		node.getCondgt().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("cond " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAEqualCond(AEqualCond node) {
 		node.getCondeq().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("cond " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseANotequalCond(ANotequalCond node) {
 		node.getCondneq().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("cond " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAGeqCond(AGeqCond node) {
 		node.getCondgeq().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("cond " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseALeqCond(ALeqCond node) {
 		node.getCondleq().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("cond " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAPlusAddop(APlusAddop  node) {
 		node.getPlus().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("add " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAMinusAddop(AMinusAddop node) {
 		node.getMinus().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("add " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAMultiplyMultop(AMultiplyMultop  node) {
 		node.getMultiply().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("mult " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseADivideMultop(ADivideMultop node) {
 		node.getDivide().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("mult " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAIntType(AIntType node) {
 		node.getTint().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("inttype " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 	
 	public void caseARealType(ARealType node) {
 		node.getTreal().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("type " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAStringType(AStringType node) {
 		node.getTstring().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("type " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseABoolType(ABoolType node) {
 		node.getTbool().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("type " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAVoidType(AVoidType node) {
 		node.getTvoid().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("void " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 
 	public void caseAIdType(AIdType node) {
 		node.getId().apply(this);
-		temp = stack.pop();
+		//temp = stack.pop();
 		//System.out.println("idtype " + temp);
-		stack.push(temp);
-		temp = "";
+		//stack.push(temp);
+		//temp = "";
 	}
 	
 	public void caseTTint(TTint node){
@@ -1754,5 +2022,12 @@ public class SecondPass extends DepthFirstAdapter {
                         //dealing with classes and objects and stuff...
                     }
         }
+        
+        
+        public static boolean isNumeric(String str)
+        {
+          return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
+        }
+
 }
 
