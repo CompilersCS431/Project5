@@ -38,6 +38,26 @@ public class SecondPass extends DepthFirstAdapter {
 		node.getBegin().apply(this);
 		node.getClassmethodstmts().apply(this);
 		node.getEnd().apply(this);
+                
+                //add the variables from the symbol table to the .data section
+                HashMap m = symbolTable.getVarTable() ;
+                Set<String> keys = m.keySet() ;
+                Variable v ;
+                String type ;
+                for(String key : keys)
+                {
+                    System.out.println(key);
+                    v = (Variable) (m.get(key));
+                    type = v.getType();
+                    if(type.equals("STRING")){
+                        dataPart = dataPart + key + ": .asciiz " + v.getValue() + "\n .align 2 \n" ;
+                    }
+                    else {
+                        declareVar(key, type);
+                    }
+                    
+                }
+                
                 codePart = codePart + "EXIT: \n li $v0 , 10 \n syscall" ;
 	}
 
@@ -480,6 +500,10 @@ public class SecondPass extends DepthFirstAdapter {
 		String assignment = stack.pop();
 		String arr = stack.pop();
 		String id = stack.pop();
+                
+                Variable v = symbolTable.getVar(id) ;
+                v.setValue(anychars) ;
+                symbolTable.addVar(v);
 		
 		temp = id + arr + assignment + anychars + semicolon ;
 		//System.out.println("anychar stmt " + temp);
@@ -501,7 +525,7 @@ public class SecondPass extends DepthFirstAdapter {
 		String colon = stack.pop();
 		String idlist = stack.pop();
 		String id = stack.pop();
-		
+		/*
                 declareVar(id , type) ;
                 
                 String[] ids = idlist.split(",") ;
@@ -510,7 +534,7 @@ public class SecondPass extends DepthFirstAdapter {
                 {
                     declareVar(ids[i] , type) ;
                 }
-                
+                */
 		temp = id + idlist + colon + type + arr + semicolon;
 		//System.out.println("IdlistStmt " + temp);
 		stack.push(temp);
@@ -566,9 +590,23 @@ public class SecondPass extends DepthFirstAdapter {
 		node.getFor().apply(this);
 		node.getLparen().apply(this);
 		node.getOptionaltype().apply(this);
+                String peekType = stack.peek();
 		node.getId().apply(this);
+                String peekId = stack.peek();
 		node.getAssignment().apply(this);
 		node.getExpr().apply(this);
+                String peekExpr = stack.peek();
+                
+                if(peekType.equals("")){
+                    Variable v = symbolTable.getVar(peekId);
+                    v.setValue(peekExpr);
+                    symbolTable.addVar(v);
+                }
+                else {
+                    Variable v = new Variable(peekId, peekType, peekExpr);
+                    symbolTable.addVar(v);
+                }
+                
 		node.getFirstsemicolon().apply(this);
 		node.getBoolean().apply(this);
 		node.getSecondsemicolon().apply(this);
@@ -592,6 +630,7 @@ public class SecondPass extends DepthFirstAdapter {
 		String optionaltype = stack.pop();
 		String lparen = stack.pop();
 		String forStmt = stack.pop();
+
 		
 		temp = forStmt + lparen + optionaltype + id + assignment + expr + firstsemi + bool + secondsemi + orstmts + rparen + lcurly + stmtseq + rcurly ;
 		
@@ -655,6 +694,7 @@ public class SecondPass extends DepthFirstAdapter {
 		String increment = stack.pop();
 		String arr = stack.pop();
 		String id = stack.pop();
+                
 		
 		temp = id + arr + increment + semicolon;
 		//System.out.println("increment stmt " + temp );
@@ -785,10 +825,15 @@ public class SecondPass extends DepthFirstAdapter {
 		
 		String semicolon = stack.pop();
 		String bool = stack.pop();
+                String assignment = stack.pop();
 		String arr = stack.pop();
 		String id = stack.pop();
+                
+                Variable v = symbolTable.getVar(id);
+                v.setValue(bool);
+                symbolTable.addVar(v);
+                
 		temp = id + arr + bool + semicolon ;
-		//System.out.println("IdbooleanStmt " + temp);
 		stack.push(temp);
 		temp = "";
 	}
@@ -1606,18 +1651,198 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseACondexpr(ACondexpr node) {
-		node.getFirstexpr().apply(this);
-		node.getCond().apply(this);
-		node.getSecondexpr().apply(this);
-		
-		String secondexpr = stack.pop();
-		String cond = stack.pop();
-		String firstexpr = stack.pop();
-                
-		temp = firstexpr + cond + secondexpr ;
-		//System.out.println("condexpr : " + temp);
-		stack.push(temp);
-		temp = "";
+          /*  int iExpOne = Integer.MAX_VALUE , iExpTwo = Integer.MAX_VALUE ;
+            double dExpOne = Double.MAX_VALUE , dExpTwo = Double.MAX_VALUE ; 
+            boolean b = false ; 
+            */
+            node.getFirstexpr().apply(this);
+            node.getCond().apply(this);
+            node.getSecondexpr().apply(this);
+
+            String secondexpr = stack.pop();
+            String cond = stack.pop();
+            String firstexpr = stack.pop();
+            
+            //this code works to preevaluate conditional expressions if we want to use it
+            
+     /*       try 
+            {
+                iExpOne = Integer.parseInt(firstexpr);
+
+            } 
+            catch (NumberFormatException e) {
+                try 
+                {
+                    dExpOne = Double.parseDouble(firstexpr);
+                }
+                catch (NumberFormatException e2) {
+                    if(symbolTable.containsVar(firstexpr)){
+                        Variable v = symbolTable.getVar(firstexpr);
+                        if(v.getType().equals("INT")){
+                            String value = v.getValue();
+                            iExpOne = Integer.parseInt(value);
+                        }
+                        else if(v.getType().equals("REAL")) {
+                            dExpOne = Double.parseDouble(v.getValue());
+                        }
+                    }
+                }
+
+            }
+            
+            
+            try 
+            {
+                iExpTwo = Integer.parseInt(secondexpr);
+
+            } 
+            catch (NumberFormatException e) {
+                try 
+                {
+                    dExpTwo = Double.parseDouble(secondexpr);
+                }
+                catch (NumberFormatException e2) {
+                    if(symbolTable.containsVar(secondexpr)){
+                        Variable v = symbolTable.getVar(secondexpr);
+                        if(v.getType().equals("INT")){
+                            String value = v.getValue();
+                            iExpTwo = Integer.parseInt(value);
+                        }
+                        else if(v.getType().equals("REAL")) {
+                            dExpTwo = Double.parseDouble(v.getValue());
+                        }
+                    }
+                }
+
+            }
+            
+            if(cond.equals(">"))
+            {
+                if(iExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = iExpOne > iExpTwo;
+                }
+                else if(iExpOne < Integer.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b =  iExpOne > dExpTwo;
+                }
+                else if(dExpOne < Double.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b = dExpOne > dExpTwo ;
+                }
+                else if(dExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = dExpOne > iExpTwo ;
+                }
+            }
+            else if(cond.equals("<"))
+            {
+                if(iExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = iExpOne < iExpTwo;
+                }
+                else if(iExpOne < Integer.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b =  iExpOne < dExpTwo;
+                }
+                else if(dExpOne < Double.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b = dExpOne < dExpTwo ;
+                }
+                else if(dExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = dExpOne < iExpTwo ;
+                }
+            }
+            else if(cond.equals(">="))
+            {
+                if(iExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = iExpOne >= iExpTwo;
+                }
+                else if(iExpOne < Integer.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b =  iExpOne >= dExpTwo;
+                }
+                else if(dExpOne < Double.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b = dExpOne >= dExpTwo ;
+                }
+                else if(dExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = dExpOne >= iExpTwo ;
+                }
+            }
+            else if(cond.equals("<="))
+            {
+                if(iExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = iExpOne <= iExpTwo;
+                }
+                else if(iExpOne <= Integer.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b =  iExpOne <= dExpTwo;
+                }
+                else if(dExpOne < Double.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b = dExpOne <= dExpTwo ;
+                }
+                else if(dExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = dExpOne <= iExpTwo ;
+                }
+            }
+            else if(cond.equals("!=="))
+            {
+                if(iExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = iExpOne != iExpTwo;
+                }
+                else if(iExpOne < Integer.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b =  iExpOne != dExpTwo;
+                }
+                else if(dExpOne < Double.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b = dExpOne != dExpTwo ;
+                }
+                else if(dExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = dExpOne != iExpTwo ;
+                }
+                else {
+                    b = !firstexpr.equals(secondexpr);
+                }
+            }
+            else if(cond.equals("=="))
+            {
+                if(iExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = iExpOne == iExpTwo;
+                }
+                else if(iExpOne < Integer.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b =  iExpOne == dExpTwo;
+                }
+                else if(dExpOne < Double.MAX_VALUE && dExpTwo < Double.MAX_VALUE)
+                {
+                    b = dExpOne == dExpTwo ;
+                }
+                else if(dExpOne < Integer.MAX_VALUE && iExpTwo < Integer.MAX_VALUE)
+                {
+                    b = dExpOne == iExpTwo ;
+                }
+                else {
+                    b = firstexpr.equals(secondexpr);
+                }
+            }
+
+            temp = b + "" ; 
+*/
+            temp = firstexpr + cond + secondexpr ;
+            //System.out.println("condexpr : " + temp);
+            stack.push(temp);
+            temp = "";
 		
 	}
 
@@ -2021,8 +2246,7 @@ public class SecondPass extends DepthFirstAdapter {
                     {
                         //dealing with classes and objects and stuff...
                     }
-        }
-        
+        }       
         
         public static boolean isNumeric(String str)
         {
