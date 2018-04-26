@@ -1,53 +1,16 @@
 BEGIN
 	x : INT;
-	y : REAL;
+	y : INT;
 	z : STRING;	
-	
-	
-	REAL Method(g : INT, h : REAL, i : STRING){
-		x : REAL;
-		IF(x < 4.5)THEN{
-			y : INT;
-		}
-		y := 3.5;
-	}
-	
-	VOID MAIN(){
-		temp := NEW TestClass();
-		y := temp.MethodTwo(FALSE, 10, 5);
-		x := temp.MethodTwo(TRUE, 10, 5);
-		PUT(x);
-		PUT(y);
-	}
-	
-	CLASS TestClass {
-		x : BOOLEAN;
-		y : INT;
-		z : INT;
-	
-		REAL MethodTwo(g : BOOLEAN, h : INT, i : INT){
-			IF(g) THEN{
-				y : INT;
-				y := 6;
-				PUT(y);
-			} ELSE{
-				WHILE(h > i){
-					FOR(INT q := h+i; q > 0; q--){
-						printMe : INT;
-						printMe := q + q;
-						PUT(printMe);
-						z := "Enter Something:";
-						PUT(z);
-						a : INT;
-						a := GET();
-						PUT(a);
-					}
-					h--;
-					i++;
-				}
-			}
-			RETURN h + i;
-			w : REAL[1];
+	VOID MAIN()
+	{
+		z := "Please input a number: " ;
+		PUT(z) ;
+		y := GET() ;
+		FOR(INT i := 1 ; i <= y ; i++)
+		{
+			x := i * i;
+			PUT(x) ;
 		}
 	}
 END
