@@ -1,0 +1,22 @@
+BEGIN
+	x : INT;
+	y : REAL;
+	z : STRING;	
+	VOID MAIN()
+	{
+		x: STRING ;
+		IF(TRUE) THEN {
+			x : BOOLEAN ;
+			x := 5 + x;
+		}
+		
+		FOR(INT i := 0; i <= y ; i++){
+			x : REAL ;
+			WHILE(TRUE){
+				x : INT ;
+			}
+			
+			x := "HELLO WORLD" ;
+		}
+	}
+END
