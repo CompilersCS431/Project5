@@ -14,7 +14,7 @@ public class SecondPass extends DepthFirstAdapter {
         private int ifCount ;
         private int forCount ;
         private int whileCount ;
-        private int swtichCount ;
+        private int switchCount ;
         private int varCount ;
         private int boolCount ;
         private int openRegs ; 
@@ -30,7 +30,7 @@ public class SecondPass extends DepthFirstAdapter {
             ifCount = 0 ;
             forCount = 0 ;
             whileCount = 0;
-            swtichCount = 0;
+            switchCount = 0;
             varCount = 0;
             boolCount = 0 ;
             openRegs = 8 ; 
@@ -40,6 +40,8 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseAProg(AProg node) {
+                dataPart = dataPart + "newLine: .asciiz \"\\n\" \n" ;
+                dataPart = dataPart + ".align 2 \n" ;
 		node.getBegin().apply(this);
 		node.getClassmethodstmts().apply(this);
 		node.getEnd().apply(this);
@@ -438,7 +440,7 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseAExprassignmentStmt(AExprassignmentStmt node) {
-		node.getId().apply(this);	
+                node.getId().apply(this);	
 		node.getOptionalidarray().apply(this);
 		node.getAssignment().apply(this);
 		node.getExpr().apply(this);
@@ -485,7 +487,8 @@ public class SecondPass extends DepthFirstAdapter {
                     }
                 }
                 
-                codePart = codePart + "li $t0 , " + expr + "\nsw $t0 , " + id + "\n" ;
+                //codePart = codePart +("EXPR ASSIGNMENT STMT") ;
+                codePart = codePart + "move $t0 , $s" + lastOutReg + "\nsw $t0 , " + id + "\n" ;
 		
 		temp = id + arr + assignment + expr + semicolon ;
 		//System.out.println("assignment stmt " + temp);
@@ -551,7 +554,13 @@ public class SecondPass extends DepthFirstAdapter {
 		node.getLparen().apply(this);
 		node.getBoolid().apply(this);
 		node.getRparen().apply(this);
-		node.getThen().apply(this);
+		node.getThen().apply(this); 
+                
+                lastInReg = getOpenInReg(lastInReg) ;
+                int condReg = lastInReg ;
+                
+                codePart = codePart + "move $t" + condReg + " , $s" + lastOutReg + "\n" ;
+                
 		node.getOptionalelse().apply(this);
 		
 		String elsestmt = stack.pop();
@@ -565,17 +574,36 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("Ifstmt " + temp);
 		stack.push(temp);
 		temp = "" ;
-		
+                
+                freeInReg(condReg) ;
+                freeAllReg() ;
 	}
 
 	public void caseAWhileStmt(AWhileStmt node) {
-		node.getWhile().apply(this);
+                node.getWhile().apply(this);
 		node.getLparen().apply(this);
+                
+                //get boolean info
+                String whileNum = "_" + whileCount ;
+                whileCount++ ;
+                
+                codePart = codePart + "START_WHILE_LOOP" + whileNum + ": \n" ;
+                
 		node.getBoolean().apply(this);
+                
+                codePart = codePart + "move $t0 , $s" + lastOutReg + "\n";
+                codePart = codePart + "beq $t0 , $zero , END_WHILE_LOOP" + whileNum + "\n" ;
+                
 		node.getRparen().apply(this);
 		node.getLcurly().apply(this);
 		node.getStmtseq().apply(this);
+                
+                freeAllReg() ;
+                
 		node.getRcurly().apply(this);
+                
+                codePart = codePart + "b START_WHILE_LOOP" + whileNum + "\n" ;
+                codePart = codePart + "END_WHILE_LOOP" + whileNum + ": \n" ;
 		
 		String rcurly = stack.pop();
 		String stmtseq = stack.pop();
@@ -589,6 +617,7 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("while stmts" + temp);
 		stack.push(temp);
 		temp = "";
+                freeAllReg() ;
 	}
 
 	public void caseAForStmt(AForStmt node) {
@@ -614,13 +643,18 @@ public class SecondPass extends DepthFirstAdapter {
                     symbolTable.addVar(v);
                 }
                 
-                codePart = codePart + "lw $t" + lastInReg + " , " + v.getName() + "\n" ;
-                String conditionName = "condition_for_" + forCount ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + v.getName() + "\n" ;
+                
+                codePart = codePart + "lw $s" + lastInReg + " , " + v.getName() + "\n" ;
+                String forNum = "_" + forCount ;
+                forCount ++ ;
+                String conditionName = "condition_for" + forNum ;
                 declareVar(conditionName , "BOOLEAN") ;
 		node.getFirstsemicolon().apply(this);
 		
                 int preBoolLength = codePart.length() ;
                 //trust this returns correct code
+                int boolNum = boolCount ;
                 node.getBoolean().apply(this);
                 
                 String boolCode = codePart.substring(preBoolLength , codePart.length()) ;
@@ -640,28 +674,37 @@ public class SecondPass extends DepthFirstAdapter {
 		node.getLcurly().apply(this);
                 
                 //Generate beginning for loop code
-                codePart = codePart + "START_FOR_LOOP_" + forCount + ":\n" ;
+                codePart = codePart + "lw $t0 , " + conditionName + "\n" ;
+                codePart = codePart + "beq $t0 , $zero , END_FOR_LOOP" + forNum + "\n" ;
+                
+                codePart = codePart + "START_FOR_LOOP" + forNum + ":\n" ;
                 codePart = codePart + "lw $t" + lastInReg + " , " + v.getName() + "\n" ;
                 
 		node.getStmtseq().apply(this);
                 
+                freeAllReg() ;
+                
                 //Generate end for loop code
-                codePart = codePart + "sw $t" + lastInReg + " , " + v.getName() + "\n" ;
                 codePart = codePart + orCode ;
                 
-                String bc1 = "_"+(boolCount - 1) ;
+                String bc1 = "_"+(boolNum) ;
                 boolCount++ ;
                 String bc2 = "_"+(boolCount - 1) ;
                 
                 String boolCode2 = boolCode.replaceAll(bc1 , bc2) ;
                 
                 codePart = codePart + boolCode2 ;
-                codePart = codePart + "sw $s" + lastOutReg + " , " + conditionName + "\n" ;
+                
+                String[] boolHack = boolCode2.split(bc2 + ":") ;
+                String boolEnd = boolHack[boolHack.length - 1] ;
+                boolHack = boolEnd.split(" ") ;
+                boolEnd = boolHack[1] ;
+                
+                codePart = codePart + "sw " + boolEnd + " , " + conditionName + "\n" ;
                 codePart = codePart + "lw $t0 , " + conditionName + "\n";
-                codePart = codePart + "beq $t0 , $zero , END_FOR_LOOP_" + forCount + "\n" ;
-                codePart = codePart + "b START_FOR_LOOP_" + forCount + "\n" ;
-                codePart = codePart + "END_FOR_LOOP_" + forCount + ":\n" ;
-                forCount ++ ;
+                codePart = codePart + "beq $t0 , $zero , END_FOR_LOOP" + forNum + "\n" ;
+                codePart = codePart + "b START_FOR_LOOP" + forNum + "\n" ;
+                codePart = codePart + "END_FOR_LOOP" + forNum + ":\n" ;
                 //take care of registers or something.
                 
 		node.getRcurly().apply(this);
@@ -687,6 +730,7 @@ public class SecondPass extends DepthFirstAdapter {
 		//System.out.println("Forstmts " + temp );
 		stack.push(temp);
 		temp = "";
+                freeAllReg() ;
 
 	}
 
@@ -706,6 +750,24 @@ public class SecondPass extends DepthFirstAdapter {
 		String assignment = stack.pop();
 		String arr = stack.pop();
 		String id = stack.pop();
+                
+                Variable v = symbolTable.getVar(id) ;
+                String type = v.getType() ;
+                
+                if(type.equals("INT") || type.equals("BOOLEAN"))
+                {
+                    //read int
+                    codePart = codePart + "li $v0 , 5 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                    codePart = codePart + "sw $v0 , " + id + "\n" ;
+                }
+                else if(type.equals("REAL"))
+                {
+                    //read double
+                    codePart = codePart + "li $v0 , 7 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                    codePart = codePart + "sw $f0 , " + id + "\n" ;
+                }
 		
 		temp = id + arr + assignment + get + lparen + rparen + semicolon ;
 		//System.out.println("GET STMT " + temp);
@@ -714,13 +776,13 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseAPutStmt(APutStmt node) {
-		node.getPut().apply(this);
+                node.getPut().apply(this);
 		node.getLparen().apply(this);
 		node.getId().apply(this);
 		node.getOptionalidarray().apply(this);
 		node.getRparen().apply(this);
 		node.getSemicolon().apply(this);
-		
+                
 		String semicolon = stack.pop();
 		String rparen = stack.pop();
 		String arr = stack.pop();
@@ -728,6 +790,59 @@ public class SecondPass extends DepthFirstAdapter {
 		String lparen = stack.pop();
 		String put = stack.pop();
 		
+                Variable v = symbolTable.getVar(id) ;
+                String type = v.getType() ;
+                
+                lastInReg = getOpenInReg(lastInReg) ;
+                int varReg = lastInReg ;
+                
+                //codePart = codePart +("PUT STMT") ;
+                
+                if(type.equals("INT"))
+                {
+                    codePart = codePart + "lw $t" + varReg + " , " + id + "\n" ;
+                    codePart = codePart + "move $a0 , $t" + varReg + "\n" ; 
+                    //print integer
+                    codePart = codePart + "li $v0 , 1 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                    codePart = codePart + "la $a0 , newLine \n" ;
+                    codePart = codePart + "li $v0 , 4 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                }
+                else if(type.equals("REAL"))
+                {
+                    codePart = codePart + "lw $t" + varReg + " , " + id + "\n" ;
+                    codePart = codePart + "move $a0 , $t" + varReg + "\n" ; 
+                    //print double
+                    codePart = codePart + "li $v0 , 3 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                    codePart = codePart + "la $a0 , newLine \n" ;
+                    codePart = codePart + "li $v0 , 4 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                }
+                else if(type.equals("STRING"))
+                {
+                    codePart = codePart + "la $t" + varReg + " , " + id + "\n" ;
+                    codePart = codePart + "move $a0 , $t" + varReg + "\n" ; 
+                    //print string
+                    codePart = codePart + "li $v0 , 4 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                    codePart = codePart + "la $a0 , newLine \n" ;
+                    codePart = codePart + "li $v0 , 4 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                }
+                else if(type.equals("BOOLEAN"))
+                {
+                    //print integer
+                    codePart = codePart + "li $v0 , 1 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                    codePart = codePart + "la $a0 , newLine \n" ;
+                    codePart = codePart + "li $v0 , 4 \n" ;
+                    codePart = codePart + "syscall \n" ;
+                }
+                
+                freeInReg(varReg) ;
+                
 		temp = put + lparen + id + arr + rparen + semicolon ;
 		//System.out.println("PUT STMT " + temp);
 		stack.push(temp); 
@@ -910,6 +1025,13 @@ public class SecondPass extends DepthFirstAdapter {
 
 	public void caseASwitchStmt(ASwitchStmt node){
 		node.getSwitch().apply(this);
+                
+                String switchNum = "_" + switchCount ;
+                switchCount++ ;
+                
+                String caseBreak = "" ;
+                String caseParts = "" ;
+                
 		node.getFirstlparen().apply(this);
 		node.getExpr().apply(this);
 		node.getFirstrparen().apply(this);
@@ -917,16 +1039,28 @@ public class SecondPass extends DepthFirstAdapter {
 		node.getCase().apply(this);
 		node.getSecondlparen().apply(this);
 		node.getNumber().apply(this);
+                
+                String caseVal = stack.peek() ;
+                caseBreak = caseBreak + "li $t" + lastInReg + " , " + caseVal + "\n" ;
+                caseBreak = caseBreak + "beq $s" + lastOutReg + " , $t" + lastInReg + "CASE" + switchNum + "_" + caseVal + "\n" ;
+                
 		node.getSecondrparen().apply(this);
 		node.getFirstcolon().apply(this);
+                
+                codePart = codePart + "CASE" + switchNum + "_"+ caseVal + ": \n" ;
 		node.getFirststmtseq().apply(this);
 		node.getOptlbreak().apply(this);
 		node.getOptionalswitchcases().apply(this);
 		node.getDefault().apply(this);
+                
+                codePart = codePart + "DEFAULT" + switchNum + ":\n" ;
+                
 		node.getSecondcolon().apply(this);
 		node.getSecondstmtseq().apply(this);
 		node.getRcurly().apply(this);
 		
+                codePart = codePart + "END_SWITCH" + switchNum + ":\n" ;
+                
 		String rcurly = stack.pop();
 		String secondstmtseq = stack.pop();
 		String secondcolon = stack.pop();
@@ -946,9 +1080,10 @@ public class SecondPass extends DepthFirstAdapter {
 		String switchstmt = stack.pop();
 		
 		temp = switchstmt + lparen + expr + rparen + lcurly + casestmt + secondlparen + number + secondrparen + colon + stmtseq + optlbreak + optlswitch + defaultstmt + secondcolon + secondstmtseq + rcurly ;
-		//System.out.println("switch stmts " + temp );
 		stack.push(temp);
 		temp = "";
+                
+                codePart = codePart + caseBreak + caseParts ;
 	}
 
 	public void caseACommaidlistOptlidlist(ACommaidlistOptlidlist node) {
@@ -961,7 +1096,6 @@ public class SecondPass extends DepthFirstAdapter {
 		String comma = stack.pop();
 		
 		temp = comma + id + optlid ;
-		//System.out.println("Optlidlist " + temp);
 		stack.push(temp);
 		temp = "";
 	}
@@ -972,28 +1106,49 @@ public class SecondPass extends DepthFirstAdapter {
 
 	public void caseANoelseOptionalelse(ANoelseOptionalelse node){	
 		node.getLcurly().apply(this);
+                
+                String ifNum = "_" + ifCount ;
+                ifCount++ ;
+                codePart = codePart + "beq $t" + lastInReg + " , $zero , END_IF" + ifNum + "\n" ;
+                codePart = codePart + "BEGIN_IF" + ifNum + ": \n" ;
+                
 		node.getStmtseq().apply(this);
 		node.getRcurly().apply(this);
+                
+                codePart = codePart + "END_IF" + ifNum + ": \n" ;
 
 		String rcurly = stack.pop();
 		String stmtseq = stack.pop();
 		String lcurly = stack.pop();
 		
 		temp = lcurly + stmtseq + rcurly ;
-		//System.out.println("Noelse " + temp);
 		stack.push(temp);
 		temp = "";
 	}
 
 	public void caseAElseOptionalelse(AElseOptionalelse node){
 		node.getFirstlcurly().apply(this);
+                
+                String ifNum = "_" + ifCount ;
+                ifCount++ ;
+                codePart = codePart + "beq $t" + lastInReg + " , $zero , ELSE" + ifNum + "\n" ;
+                codePart = codePart + "BEGIN_IF" + ifNum + ": \n" ;
+                
 		node.getFirststmtseq().apply(this);
 		node.getFirstrcurly().apply(this);
+                
+                codePart = codePart + "b END_IF_ELSE" + ifNum + "\n" ;
+                
 		node.getElse().apply(this);
+                
+                codePart = codePart + "ELSE" + ifNum + ": \n" ; 
+                
 		node.getSecondlcurly().apply(this);
 		node.getSecondstmtseq().apply(this);
 		node.getSecondrcurly().apply(this);
 		
+                codePart = codePart + "END_IF_ELSE" + ifNum + ": \n" ;
+                
 		String secondrcurly = stack.pop();
 		String secondstmtseq = stack.pop();
 		String secondlcurly = stack.pop();
@@ -1262,6 +1417,7 @@ public class SecondPass extends DepthFirstAdapter {
             lastInReg = getOpenInReg(lastInReg) ;
             int secondExpTemp = lastInReg ;
 
+             //codePart = codePart + "MULTIPLE EXPR" ;
             codePart = codePart + "move $t" + firstExpTemp + " , $s" + firstExpReg + "\n" ;
             codePart = codePart + "move $t" + secondExpTemp + " , $s" + secondExpReg + "\n" ;
 
@@ -1274,8 +1430,9 @@ public class SecondPass extends DepthFirstAdapter {
                 codePart = codePart + "sub $s" + lastOutReg + " , $t" + firstExpTemp + " , $t" + secondExpTemp + "\n" ;
             }
             
-            freeInReg(secondExpTemp) ;
-            freeInReg(firstExpTemp) ;
+            int outputReg = lastOutReg ;
+            freeAllReg() ;
+            lastOutReg = getOpenOutReg(outputReg) ;
             
             String term = stack.pop();
             String addop = stack.pop();
@@ -1414,6 +1571,7 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseATermmultopTerm(ATermmultopTerm node) {
+            
             /* int iFact = Integer.MAX_VALUE, iTerm = Integer.MAX_VALUE, ival = Integer.MAX_VALUE ;
             double dFact = Double.MAX_VALUE, dTerm = Double.MAX_VALUE, dval = Double.MAX_VALUE ;*/
             node.getTerm().apply(this);
@@ -1431,12 +1589,13 @@ public class SecondPass extends DepthFirstAdapter {
             lastInReg = getOpenInReg(lastInReg) ;
             int secondTermTemp = lastInReg ;
             
-            codePart = codePart + "move $t" + firstTermTemp + " , $s" + firstTermReg + "/n" ;
-            codePart = codePart + "move $t" + secondTermReg + " , $s" + secondTermReg + "/n" ;
+            //codePart = codePart + ("TERM MULTOP TERM");
+            codePart = codePart + "move $t" + firstTermTemp + " , $s" + firstTermReg + "\n" ;
+            codePart = codePart + "move $t" + secondTermTemp + " , $s" + secondTermReg + "\n" ;
             
             if(operator.equals("*"))
             {
-                codePart = codePart + "mul $t" + firstTermTemp + " , $t" + secondTermTemp + "\n" ;
+                codePart = codePart + "mult $t" + firstTermTemp + " , $t" + secondTermTemp + "\n" ;
             }
             else if(operator.equals("/"))
             {
@@ -1651,10 +1810,10 @@ public class SecondPass extends DepthFirstAdapter {
 		
 		temp = stack.pop();
                 
-                lastInReg = getOpenInReg(lastInReg) ;
-                int regNum = lastInReg ;
+                lastOutReg = getOpenOutReg(lastOutReg) ;
+                int regNum = lastOutReg ;
                 
-                String reg = "$t" + regNum ;
+                String reg = "$s" + regNum ;
                 
                 codePart = codePart + "lw " + reg + " , " + temp + "\n" ;
                 String mipsCode = "lw " + reg + " , " + temp + "\n";
@@ -1774,12 +1933,13 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseACondexprBoolean(ACondexprBoolean node) {
-		node.getCondexpr().apply(this);
+                node.getCondexpr().apply(this);
 		temp = stack.pop();
 		//System.out.println("condexprboolean " + temp );
 		stack.push(temp);
 		temp = "";
                 
+                //codePart = codePart +("COND EXPR BOOLEAN") ;
                 codePart = codePart + "move $s" + (lastOutReg + 1) + " , $s" + lastOutReg + "\n" ;
                 int out = lastOutReg++ ;
                 freeOutReg(lastOutReg) ;
@@ -1803,7 +1963,7 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseACondexpr(ACondexpr node) {
-          /*  int iExpOne = Integer.MAX_VALUE , iExpTwo = Integer.MAX_VALUE ;
+            /*  int iExpOne = Integer.MAX_VALUE , iExpTwo = Integer.MAX_VALUE ;
             double dExpOne = Double.MAX_VALUE , dExpTwo = Double.MAX_VALUE ; 
             boolean b = false ; 
             */  
@@ -1811,6 +1971,10 @@ public class SecondPass extends DepthFirstAdapter {
             //get first exp and store it to a register
             lastInReg = getOpenInReg(lastInReg) ;
             int firstExpReg = lastInReg ;
+            
+            //codePart = codePart +("COND EXPR") ;
+            String boolNum = "_" + boolCount ;
+            boolCount ++ ;
             codePart = codePart + "move $t" + lastInReg + " , $s" + lastOutReg + "\n" ;
             freeOutReg(lastOutReg) ;
             
@@ -1827,7 +1991,7 @@ public class SecondPass extends DepthFirstAdapter {
             int trueReg = lastInReg ;
             
             codePart = codePart + "li $t" + trueReg + " , 1 \n" ;
-            String breakFinished = " $t"+ firstExpReg + " , $t"+secondExpReg + " , TRUE_" + boolCount + "\n" + "b FALSE_" + boolCount + "\n" ;
+            String breakFinished = " $t"+ firstExpReg + " , $t"+secondExpReg + " , TRUE" + boolNum + "\n" + "b FALSE" + boolNum + "\n" ;
             
             if(cond.equals(">"))
             {
@@ -1854,18 +2018,16 @@ public class SecondPass extends DepthFirstAdapter {
                 codePart = codePart + "bne" + breakFinished ;
             }
             
-            codePart = codePart + "TRUE_" + boolCount + ":\n" ;
+            codePart = codePart + "TRUE" + boolNum + ":\n" ;
             codePart = codePart + "move $s" + lastOutReg + " , $t" + trueReg + "\n" ;
-            codePart = codePart + "b END_CHECK_" + boolCount + "\n" ;
-            codePart = codePart + "FALSE_" + boolCount + ":\n" ;
+            codePart = codePart + "b END_CHECK" + boolNum + "\n" ;
+            codePart = codePart + "FALSE" + boolNum + ":\n" ;
             codePart = codePart + "move $s" + lastOutReg + " , $zero \n" ;
-            codePart = codePart + "END_CHECK_" + boolCount + ":\n" ;
+            codePart = codePart + "END_CHECK" + boolNum + ":\n" ;
             
             freeInReg(trueReg) ;
             freeInReg(firstExpReg) ;
             freeInReg(secondExpReg) ;
-            
-            boolCount ++ ;
 
             String secondexpr = stack.pop();
             cond = stack.pop();
@@ -2417,7 +2579,7 @@ public class SecondPass extends DepthFirstAdapter {
 		stack.push(node.getText());
 	}
 	
-	public void caseTcondleq(TCondleq node){
+	public void caseTCondleq(TCondleq node){
 		
 		stack.push(node.getText());
 	}
@@ -2465,6 +2627,7 @@ public class SecondPass extends DepthFirstAdapter {
             int count = 0 ; 
             if(!regStatus[reg])
             {
+                regStatus[reg] = true ;
                 return reg ;
             }
             else
@@ -2485,6 +2648,7 @@ public class SecondPass extends DepthFirstAdapter {
                     }
                 }
             }
+            regStatus[reg] = true ;
             return reg ;
         }
         
@@ -2493,6 +2657,7 @@ public class SecondPass extends DepthFirstAdapter {
             int count = 0 ; 
             if(!outRegStatus[reg])
             {
+                outRegStatus[reg] = true ;
                 return reg ;
             }
             else
@@ -2513,6 +2678,7 @@ public class SecondPass extends DepthFirstAdapter {
                     }
                 }
             }
+            outRegStatus[reg] = true ;
             return reg ;       
         }
         
@@ -2558,6 +2724,17 @@ public class SecondPass extends DepthFirstAdapter {
             else
             {
                 lastOutReg = count - 1 ;
+            }
+        }
+        
+        public void freeAllReg()
+        {
+            lastOutReg = 0 ;
+            lastInReg = 0 ;
+            for(int i = 0 ; i < regStatus.length ; i++)
+            {
+                regStatus[i] = false ;
+                outRegStatus[i] = false ;
             }
         }
 
