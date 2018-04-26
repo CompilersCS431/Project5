@@ -1,0 +1,67 @@
+BEGIN
+	x : INT;
+	y : INT;
+	z : STRING;	
+	a : STRING;
+	b : STRING;
+	c : STRING;
+	d : STRING;
+	VOID MAIN()
+	{
+		w : INT[10] ;
+		z := "Please input a number: " ;
+		a := "The number is 25" ;
+		b := "The number is not 25" ;
+		c := "The number is 36" ;
+		d := "You should not see this." ;
+		j : INT ;
+		PUT(z) ;
+		y := GET() ;
+		FOR(INT i := 1 ; i <= y ; i++)
+		{
+			x := i * i;
+			PUT(x) ;
+			j := x - 1 ;
+			WHILE(j >= 0)
+			{
+				PUT(j) ;
+				j := j - 1;
+			}
+		}
+		
+		IF(x == 25) THEN
+		{
+			PUT(a) ;
+		}
+		ELSE
+		{
+		    IF(x == 36) THEN
+			{
+				PUT(c) ;
+			}
+			PUT(b) ;
+		}
+		
+		SWITCH(x)
+		{
+			CASE(1):
+				PUT(b) ;
+			CASE(4):
+				PUT(b) ;
+			CASE(9):
+				PUT(b) ;
+			CASE(16):
+				PUT(b) ;
+				BREAK ;
+			CASE(25):
+				PUT(a) ;
+				BREAK ;
+			CASE(36):
+				PUT(b) ;
+				PUT(c) ;
+				BREAK ;
+			DEFAULT:
+				PUT(d) ;
+		}
+	}
+END
