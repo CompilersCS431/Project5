@@ -8,13 +8,17 @@ public class PrintTree extends DepthFirstAdapter {
 	public SymbolTable symbolTable;
 	private Stack<String> stack;
 	private String temp;
-        public Stack<String> error ;
+        public ArrayList<String> error ;
+        private boolean isId ;
+        private String myParent;
 
 	public PrintTree() {
             symbolTable = new SymbolTable();
             stack = new Stack<String>();
             temp = new String();
-            error = new Stack<>() ;
+            error = new ArrayList<>() ;
+            isId = false;
+            myParent = new String();
 	}
 
 	public void caseAProg(AProg node) {
@@ -52,8 +56,10 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 	
 	public void caseATypevarliststmtClassmethodstmt(ATypevarliststmtClassmethodstmt node) {
-		node.getType().apply(this);
+                node.getType().apply(this);
 		node.getId().apply(this);
+                String parentId = stack.peek();
+                myParent = parentId;
 		node.getLparen().apply(this);
 		node.getVarlist().apply(this);
 		node.getRparen().apply(this);
@@ -100,159 +106,158 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 	
 	public void caseAIdlisttypeClassmethodstmt(AIdlisttypeClassmethodstmt node) {
-		node.getId().apply(this);
-		node.getOptlidlist().apply(this);
-		node.getColon().apply(this);
-		node.getType().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String type = stack.pop();
-		String colon = stack.pop();
-		String idlist = stack.pop();
-		String id = stack.pop();
-                
-                Variable v = new Variable(id, type);
-                symbolTable.addVar(v);
-                
-                if(!idlist.equals("")){
-                    String[] ids = idlist.split(",");
-                    for(int i = 0; i < ids.length ; i++ ){
-                        Variable var = new Variable(ids[i], type);
-                        symbolTable.addVar(var);
-                    }
+         //   myParent = "GLOBAL";
+            node.getId().apply(this);
+            node.getOptlidlist().apply(this);
+            node.getColon().apply(this);
+            node.getType().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String type = stack.pop();
+            String colon = stack.pop();
+            String idlist = stack.pop();
+            String id = stack.pop();
+
+            Variable v = new Variable(id, type);
+            symbolTable.addVar(v);
+
+            if(!idlist.equals("")){
+                String[] ids = idlist.split(",");
+                for(int i = 0; i < ids.length ; i++ ){
+                    Variable var = new Variable(ids[i], type);
+                    symbolTable.addVar(var);
                 }
-		
-		temp = id + idlist + colon + type + semicolon ;
-		//System.out.println("idlist classmethodstmt " + temp);
-		stack.push(temp);
-		temp = "";
+            }
+
+            temp = id + idlist + colon + type + semicolon ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAOneormoreMethodstmtseqs(AOneormoreMethodstmtseqs node) {
-		node.getMethodstmtseqs().apply(this);
-		node.getMethodstmtseq().apply(this);
-		
-		String methodstmtseqs = stack.pop();
-		String methodstmtseq = stack.pop();
-		
-		temp = methodstmtseq + methodstmtseqs ;
-		//System.out.println("one or more methodstmtseq " + temp );
-		stack.push(temp);
-		temp = "";
+            node.getMethodstmtseqs().apply(this);
+            node.getMethodstmtseq().apply(this);
+
+            String methodstmtseqs = stack.pop();
+            String methodstmtseq = stack.pop();
+
+            temp = methodstmtseq + methodstmtseqs ;
+            //System.out.println("one or more methodstmtseq " + temp );
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAEmptyproductionMethodstmtseqs(AEmptyproductionMethodstmtseqs node) {
-		stack.push("") ;
+            stack.push("") ;
 	}
 	
 	public void caseATypevarlistMethodstmtseq(ATypevarlistMethodstmtseq node) {
-		node.getType().apply(this);
-		node.getId().apply(this);
-		node.getLparen().apply(this);
-		node.getVarlist().apply(this);
-		node.getRparen().apply(this);
-		node.getLcurly().apply(this);
-		node.getStmtseq().apply(this);
-		node.getRcurly().apply(this);
-		
-		String rcurly = stack.pop();
-		String stmtseq = stack.pop();
-		String lcurly = stack.pop();
-		String rparen = stack.pop();
-		String varlist = stack.pop();
-		String lparen = stack.pop();
-		String id = stack.pop();
-		String type = stack.pop();
-                
-                Method m = new Method(id, type);
-                
-                if(!varlist.equals("")){
-                    String[] varlistArr = varlist.split(","); 
-                    for( int i = 0 ; i < varlistArr.length ; i++ ){
-                        String[] params = varlistArr[i].split(":");
-                        String paramId = params[0];
-                        String paramType = params[1];
-                        
-                        Variable v = new Variable(paramId, paramType);
-                        m.addParam(v);
-                    }
+            node.getType().apply(this);
+            node.getId().apply(this);
+            node.getLparen().apply(this);
+            node.getVarlist().apply(this);
+            node.getRparen().apply(this);
+            node.getLcurly().apply(this);
+            node.getStmtseq().apply(this);
+            node.getRcurly().apply(this);
+
+            String rcurly = stack.pop();
+            String stmtseq = stack.pop();
+            String lcurly = stack.pop();
+            String rparen = stack.pop();
+            String varlist = stack.pop();
+            String lparen = stack.pop();
+            String id = stack.pop();
+            String type = stack.pop();
+
+            Method m = new Method(id, type);
+
+            if(!varlist.equals("")){
+                String[] varlistArr = varlist.split(","); 
+                for( int i = 0 ; i < varlistArr.length ; i++ ){
+                    String[] params = varlistArr[i].split(":");
+                    String paramId = params[0];
+                    String paramType = params[1];
+
+                    Variable v = new Variable(paramId, paramType);
+                    m.addParam(v);
                 }
-                
-                symbolTable.addMethod(m);
-		
-		temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly ;
-		//System.out.println("Typevarlist methodstmtseq " + temp );
-		stack.push(temp);
-		temp = "";
+            }
+
+            symbolTable.addMethod(m);
+
+            temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAIdtypeMethodstmtseq(AIdtypeMethodstmtseq node) {
-		node.getId().apply(this);
-		node.getOptlidlist().apply(this);
-		node.getColon().apply(this);
-		node.getType().apply(this);
-		node.getSemicolon().apply(this);
-	
-		String semicolon = stack.pop();
-		String type = stack.pop();
-		String colon = stack.pop();
-		String idlist = stack.pop();
-		String id = stack.pop();
-                
-                Variable v = new Variable(id, type);
-                symbolTable.addVar(v);
-                if(!idlist.equals("")){
-                    String[] ids = idlist.split(",");
-                    for(int i = 0; i < ids.length ; i++ ){
-                        Variable var = new Variable(ids[i], type);
-                    }
+            node.getId().apply(this);
+            node.getOptlidlist().apply(this);
+            node.getColon().apply(this);
+            node.getType().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String type = stack.pop();
+            String colon = stack.pop();
+            String idlist = stack.pop();
+            String id = stack.pop();
+
+            Variable v = new Variable(id, type);
+            symbolTable.addVar(v);
+            if(!idlist.equals("")){
+                String[] ids = idlist.split(",");
+                for(int i = 0; i < ids.length ; i++ ){
+                    Variable var = new Variable(ids[i], type);
                 }
-		
-		temp = id + idlist + colon + type + semicolon ; 
-		//System.out.println("Idtype methodstmtseq " + temp);
-		stack.push(temp);
-		temp = "";
+            }
+
+            temp = id + idlist + colon + type + semicolon ; 
+            //System.out.println("Idtype methodstmtseq " + temp);
+            stack.push(temp);
+            temp = "";
 	}
 	
 	public void caseAAssignstringMethodstmtseq(AAssignstringMethodstmtseq node) {
-		node.getId().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getAssignment().apply(this);
-		node.getAnychars().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String anychars = stack.pop();
-		String assignment = stack.pop();
-		String arr = stack.pop();
-		String id = stack.pop();
-		
-		temp = id + arr + assignment + anychars + semicolon ;
-		//System.out.println("assignment anychars methodstmtseq " + temp );
-		stack.push(temp);
-		temp = "";
+            node.getId().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getAssignment().apply(this);
+            node.getAnychars().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String anychars = stack.pop();
+            String assignment = stack.pop();
+            String arr = stack.pop();
+            String id = stack.pop();
+
+            temp = id + arr + assignment + anychars + semicolon ;
+            //System.out.println("assignment anychars methodstmtseq " + temp );
+            stack.push(temp);
+            temp = "";
 	}
 	
 	public void caseAPrintstmtMethodstmtseq(APrintstmtMethodstmtseq node){
-		node.getPut().apply(this);
-		node.getLparen().apply(this);
-		node.getId().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getRparen().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String rparen = stack.pop();
-		String arr = stack.pop();
-		String id = stack.pop();
-		String lparen = stack.pop();
-		String put = stack.pop();
-		
-		temp = put + lparen + id + arr + rparen + semicolon ;
-		//System.out.println("print methodstmtseq " + temp);
-		stack.push(temp);
-		temp = "";
+            node.getPut().apply(this);
+            node.getLparen().apply(this);
+            node.getId().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getRparen().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String rparen = stack.pop();
+            String arr = stack.pop();
+            String id = stack.pop();
+            String lparen = stack.pop();
+            String put = stack.pop();
+
+            temp = put + lparen + id + arr + rparen + semicolon ;
+            //System.out.println("print methodstmtseq " + temp);
+            stack.push(temp);
+            temp = "";
 	}
 	
 	public void caseAAssignmentMethodstmtseq(AAssignmentMethodstmtseq node) {
@@ -411,6 +416,7 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAExprassignmentStmt(AExprassignmentStmt node) {
+            String parent = myParent ;
             node.getId().apply(this);	
             node.getOptionalidarray().apply(this);
             node.getAssignment().apply(this);
@@ -423,29 +429,53 @@ public class PrintTree extends DepthFirstAdapter {
             String arr = stack.pop();
             String id = stack.pop();
 
-            //check if the type matches 
-            if(!symbolTable.containsVar(id)){
-                error.add("The variable " + id + " has not been declared yet. "
-                        + "A variable must be declared before it can be asigned a value.");
+            String scopeId = id + "_" + parent ;
+            if(!symbolTable.containsVar(scopeId)){
+                if(!symbolTable.containsVar(id)){
+                    error.add("The variable " + id + " has not been declared yet. "
+                            + "A variable must be declared before it can be asigned a value.");
+                }
+                else {
+                    Variable v = symbolTable.getVar(id);
+                    String type = v.getType();
+                    if(type.equals("INT")){
+                        if(expr.contains(".")){
+                            error.add("The variable " + id + " is type INT and cannot store a real number.");
+                        }
+                    }
+                    else if(type.equals("BOOLEAN")){
+                        if(!expr.equals("TRUE") || !expr.equals("FALSE")){
+                            error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
+                        }
+                    }
+                    else if(type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")){
+                        if(expr.charAt(0) == '"'){
+                            error.add("The variable " + id + " is type " + type + " and cannot store a string");
+                        }
+                    }
+                    
+                }
             }
+            //check if the type matches      
             else {
-                Variable v = symbolTable.getVar(id);
+                Variable v = symbolTable.getVar(scopeId);
                 String type = v.getType();
-                if(type.equals("INT")){
-                    if(expr.contains(".")){
-                        error.add("The variable " + id + " is type INT and cannot store a real number.");
+                    if(type.equals("INT")){
+                        if(expr.contains(".")){
+                            error.add("The variable " + id + " is type INT and cannot store a real number.");
+                        }
                     }
-                }
-                else if(type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")){
-                    if(expr.charAt(0) == '"'){
-                        error.add("The variable " + id + " is type " + type + " and cannot store a string");
+                    else if(type.equals("BOOLEAN")){
+                        if(!expr.equals("TRUE") || !expr.equals("FALSE")){
+                            error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
+                        }
                     }
-                }
-                else if(type.equals("BOOLEAN")){
-                    if(!expr.equals("TRUE") || !expr.equals("FALSE")){
-                        error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
+                    else if(type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")){
+                        if(expr.charAt(0) == '"'){
+                            error.add("The variable " + id + " is type " + type + " and cannot store a string");
+                        }
                     }
-                }
+                    
             }
 
             temp = id + arr + assignment + expr + semicolon ;
@@ -455,6 +485,7 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAExpranycharStmt(AExpranycharStmt node) {
+            String parent = myParent ;
             node.getId().apply(this);
             node.getOptionalidarray().apply(this);
             node.getAssignment().apply(this);
@@ -467,16 +498,26 @@ public class PrintTree extends DepthFirstAdapter {
             String arr = stack.pop();
             String id = stack.pop();
 
+            String scopeId = id + "_" + parent ;
             //check if variable has been declared
-            if(!symbolTable.containsVar(id)){
-                error.add("The variable " + id + " has not been declared yet. "
-                        + "A variable must be declared before it can be asigned a value.");
+            if(!symbolTable.containsVar(scopeId)){
+                if(!symbolTable.containsVar(id)){
+                    error.add("The variable " + id + " has not been declared yet. "
+                            + "A variable must be declared before it can be asigned a value.");
+                }
+                else {
+                    Variable v = symbolTable.getVar(id);
+                    String type = v.getType();
+                    if(!type.equals("STRING")){
+                        error.add("The variable " + id + " is type " + type.toUpperCase() + " and cannot store string literals.");
+                    }
+                }
             }
             else { //check if the type of the var is a string
-                Variable v = symbolTable.getVar(id);
+                Variable v = symbolTable.getVar(scopeId);
                 String type = v.getType();
                 if(!type.equals("STRING")){
-                    error.add("The variable " + id + " is not type STRING and cannot store string literals.");
+                    error.add("The variable " + id + " is type " + type + " and cannot store string literals.");
                 }
             }
 
@@ -488,6 +529,8 @@ public class PrintTree extends DepthFirstAdapter {
 	} 
 
 	public void caseAIdlistStmt(AIdlistStmt node) {
+            String idParent = myParent;
+            
             node.getId().apply(this);
             node.getOptlidlist().apply(this);
             node.getColon().apply(this);
@@ -502,13 +545,16 @@ public class PrintTree extends DepthFirstAdapter {
             String idlist = stack.pop();
             String id = stack.pop();
 
-            if(symbolTable.containsVar(id)){
-                error.add("The variable " + id + " has already been declared.");
+     
+            String idScope = id + "_" + idParent ;
+            if(symbolTable.containsVar(idScope)){
+                error.add("The variable " + id + " has already been declared in " + idParent + ".");
             }
             else {
-                Variable v = new Variable(id, type);
+                Variable v = new Variable(idScope, type);
                 symbolTable.addVar(v);
-            }
+            }    
+         
 
             if(!idlist.equals("")){
                 String[] ids = idlist.split(",");
@@ -530,198 +576,212 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseAIfbooleanStmt(AIfbooleanStmt node) {
-		node.getIf().apply(this);
-		node.getLparen().apply(this);
-		node.getBoolid().apply(this);
-		node.getRparen().apply(this);
-		node.getThen().apply(this);
-		node.getOptionalelse().apply(this);
-		
-		String elsestmt = stack.pop();
-		String then = stack.pop();
-		String rparen = stack.pop();
-		String boolid = stack.pop();
-		String lparen = stack.pop();
-		String ifstmt = stack.pop();
-		
-		temp = ifstmt + lparen + boolid + rparen + then + elsestmt ;
-		//System.out.println("Ifstmt " + temp);
-		stack.push(temp);
-		temp = "" ;
+            myParent = "IF";
+            node.getIf().apply(this);
+            node.getLparen().apply(this);
+            node.getBoolid().apply(this);
+            node.getRparen().apply(this);
+            node.getThen().apply(this);
+            node.getOptionalelse().apply(this);
+
+            String elsestmt = stack.pop();
+            String then = stack.pop();
+            String rparen = stack.pop();
+            String boolid = stack.pop();
+            String lparen = stack.pop();
+            String ifstmt = stack.pop();
+
+            temp = ifstmt + lparen + boolid + rparen + then + elsestmt ;
+            //System.out.println("Ifstmt " + temp);
+            stack.push(temp);
+            temp = "" ;
 		
 	}
 
 	public void caseAWhileStmt(AWhileStmt node) {
-		node.getWhile().apply(this);
-		node.getLparen().apply(this);
-		node.getBoolean().apply(this);
-		node.getRparen().apply(this);
-		node.getLcurly().apply(this);
-		node.getStmtseq().apply(this);
-		node.getRcurly().apply(this);
-		
-		String rcurly = stack.pop();
-		String stmtseq = stack.pop();
-		String lcurly = stack.pop();
-		String rparen = stack.pop();
-		String bool = stack.pop();
-		String lparen = stack.pop();
-		String whilesmt = stack.pop();
-		
-		temp = whilesmt + lparen + bool + rparen + lcurly + stmtseq + rcurly;
-		//System.out.println("while stmts" + temp);
-		stack.push(temp);
-		temp = "";
+            myParent = "WHILE";
+            node.getWhile().apply(this);
+            node.getLparen().apply(this);
+            node.getBoolean().apply(this);
+            node.getRparen().apply(this);
+            node.getLcurly().apply(this);
+            node.getStmtseq().apply(this);
+            node.getRcurly().apply(this);
+
+            String rcurly = stack.pop();
+            String stmtseq = stack.pop();
+            String lcurly = stack.pop();
+            String rparen = stack.pop();
+            String bool = stack.pop();
+            String lparen = stack.pop();
+            String whilesmt = stack.pop();
+
+            temp = whilesmt + lparen + bool + rparen + lcurly + stmtseq + rcurly;
+            //System.out.println("while stmts" + temp);
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAForStmt(AForStmt node) {
-		node.getFor().apply(this);
-		node.getLparen().apply(this);
-		node.getOptionaltype().apply(this);
-		node.getId().apply(this);
-		node.getAssignment().apply(this);
-		node.getExpr().apply(this);
-		node.getFirstsemicolon().apply(this);
-		node.getBoolean().apply(this);
-		node.getSecondsemicolon().apply(this);
-		node.getOrstmts().apply(this);
-		node.getRparen().apply(this);
-		node.getLcurly().apply(this);
-		node.getStmtseq().apply(this);
-		node.getRcurly().apply(this);
-		
-		String rcurly = stack.pop();
-		String stmtseq = stack.pop();
-		String lcurly = stack.pop();
-		String rparen = stack.pop();
-		String orstmts = stack.pop();
-		String secondsemi = stack.pop();
-		String bool = stack.pop();
-		String firstsemi = stack.pop();
-		String expr = stack.pop();
-		String assignment = stack.pop();
-		String id = stack.pop();
-		String optionaltype = stack.pop();
-		String lparen = stack.pop();
-		String forStmt = stack.pop();
-                
-                if(optionaltype.equals("")){ //if type is not declared must be in symbol table already
-                    if(!symbolTable.containsVar(id)){
-                        error.add("The variable " + id + " must be declared before it can be assigned a value.");
-                    }
-                    else { //if it is in symbol table the expr assignment must match the type
-                        Variable v = symbolTable.getVar(id);
-                        String type = v.getType();
-                        if(type.equals("INT")){
-                            if(expr.contains(".")){
-                                error.add("The variable " + id + " is type INT and cannot store a real number.");
-                            }
-                        }
-                        else if(type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")){
-                            if(expr.charAt(0) == '"'){
-                                error.add("The variable " + id + " is type " + type + " and cannot store a string");
-                            }
-                        }
-                        else if(type.equals("BOOLEAN")){
-                            if(!expr.equals("TRUE") || !expr.equals("FALSE")){
-                                error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
-                            }
-                        }
-                    }
-                }
-                else if(!optionaltype.equals("")){ //if the type is declared and it is already in the symbol table
-                    if(symbolTable.containsVar(id)){
-                        error.add("The variable " + id + " has already been declared.");
-                    }
-                    else { //if the optional type is declared expr assignment must match
-                        if(optionaltype.equals("INT")){
-                            if(expr.contains(".")){
-                                error.add("The variable " + id + " is type INT and cannot store a real number.");
-                            }
-                        }
-                        else if(optionaltype.equals("INT") || optionaltype.equals("DOUBLE") || optionaltype.equals("BOOLEAN")){
-                            if(expr.charAt(0) == '"'){
-                                error.add("The variable " + id + " is type " + optionaltype + " and cannot store a string");
-                            }
-                        }
-                        else if(optionaltype.equals("BOOLEAN")){
-                            if(!expr.equals("TRUE") || !expr.equals("FALSE")){
-                                error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
-                            }
-                        }
-                    } 
-                }
-                
-                if(!optionaltype.equals("")){
-                    Variable v = new Variable(id, optionaltype);
+            myParent = "FOR";
+            node.getFor().apply(this);
+            node.getLparen().apply(this);
+            node.getOptionaltype().apply(this);
+            String peekType = stack.peek();
+            node.getId().apply(this);
+            String peekId = stack.peek();
+
+            if(!peekType.equals("")){ //if the type is declared, add it to the symbolTable with its scope
+                String scopeId = peekId + "_FOR";
+                if(!symbolTable.containsVar(scopeId)){
+                    Variable v = new Variable(scopeId, peekType);
                     symbolTable.addVar(v);
+                    
                 }
-		
-		temp = forStmt + lparen + optionaltype + id + assignment + expr + firstsemi + bool + secondsemi + orstmts + rparen + lcurly + stmtseq + rcurly ;
-		
-		//System.out.println("Forstmts " + temp );
-		stack.push(temp);
-		temp = "";
+                else {
+                    error.add("The variable " + peekId + " has already been declared.");
+                }      
+            }
+            else {
+                if(!symbolTable.containsVar(peekId)){
+                    error.add("The variable " + peekId + " has not been declared.");
+                }
+            }
+
+            node.getAssignment().apply(this);
+            node.getExpr().apply(this);
+            node.getFirstsemicolon().apply(this);
+            node.getBoolean().apply(this);
+            node.getSecondsemicolon().apply(this);
+            node.getOrstmts().apply(this);
+            node.getRparen().apply(this);
+            node.getLcurly().apply(this);
+            node.getStmtseq().apply(this);
+            node.getRcurly().apply(this);
+
+            String rcurly = stack.pop();
+            String stmtseq = stack.pop();
+            String lcurly = stack.pop();
+            String rparen = stack.pop();
+            String orstmts = stack.pop();
+            String secondsemi = stack.pop();
+            String bool = stack.pop();
+            String firstsemi = stack.pop();
+            String expr = stack.pop();
+            String assignment = stack.pop();
+            String id = stack.pop();
+            String optionaltype = stack.pop();
+            String lparen = stack.pop();
+            String forStmt = stack.pop();
+
+
+            if(optionaltype.equals("")){ //if type is not declared must be in symbol table already
+                if(!symbolTable.containsVar(id)){
+                    error.add("The variable " + id + " must be declared before it can be assigned a value.");
+                }
+                else { //if it is in symbol table the expr assignment must match the type
+                    Variable v = symbolTable.getVar(id);
+                    String type = v.getType();
+                    if(type.equals("INT")){
+                        if(expr.contains(".")){
+                            error.add("The variable " + id + " is type INT and cannot store a real number.");
+                        }
+                    }
+                    else if(type.equals("BOOLEAN")){
+                        if(!expr.equals("TRUE") || !expr.equals("FALSE")){
+                            error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
+                        }
+                    }
+                    else if(type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")){
+                        if(expr.charAt(0) == '"'){
+                            error.add("The variable " + id + " is type " + type + " and cannot store a string");
+                        }
+                    }
+                    
+                }
+            }
+            else if(optionaltype.equals("INT")){
+                if(expr.contains(".")){
+                    error.add("The variable " + id + " is type INT and cannot store a real number.");
+                }
+
+                else if(optionaltype.equals("INT") || optionaltype.equals("DOUBLE") || optionaltype.equals("BOOLEAN")){
+                    if(expr.charAt(0) == '"'){
+                        error.add("The variable " + id + " is type " + optionaltype + " and cannot store a string");
+                    }
+                }
+                else if(optionaltype.equals("BOOLEAN")){
+                    if(!expr.equals("TRUE") || !expr.equals("FALSE")){
+                        error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
+                    }
+                }
+            } 
+                
+            temp = forStmt + lparen + optionaltype + id + assignment + expr + firstsemi + bool + secondsemi + orstmts + rparen + lcurly + stmtseq + rcurly ;
+            stack.push(temp);
+            temp = "";
 
 	}
 
 	public void caseAGetStmt(AGetStmt node) {
-		node.getId().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getAssignment().apply(this);
-		node.getGet().apply(this);
-		node.getLparen().apply(this);
-		node.getRparen().apply(this);
-		node.getSemicolon().apply(this);
+            node.getId().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getAssignment().apply(this);
+            node.getGet().apply(this);
+            node.getLparen().apply(this);
+            node.getRparen().apply(this);
+            node.getSemicolon().apply(this);
 
-		String semicolon = stack.pop();
-		String rparen = stack.pop();
-		String lparen = stack.pop();
-		String get = stack.pop();
-		String assignment = stack.pop();
-		String arr = stack.pop();
-		String id = stack.pop();
-		
-		temp = id + arr + assignment + get + lparen + rparen + semicolon ;
-		//System.out.println("GET STMT " + temp);
-		stack.push(temp);
-		temp = "";
+            String semicolon = stack.pop();
+            String rparen = stack.pop();
+            String lparen = stack.pop();
+            String get = stack.pop();
+            String assignment = stack.pop();
+            String arr = stack.pop();
+            String id = stack.pop();
+
+            temp = id + arr + assignment + get + lparen + rparen + semicolon ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAPutStmt(APutStmt node) {
-		node.getPut().apply(this);
-		node.getLparen().apply(this);
-		node.getId().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getRparen().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String rparen = stack.pop();
-		String arr = stack.pop();
-		String id = stack.pop();
-		String lparen = stack.pop();
-		String put = stack.pop();
-		
-		temp = put + lparen + id + arr + rparen + semicolon ;
-		//System.out.println("PUT STMT " + temp);
-		stack.push(temp); 
-		temp = "";
+            node.getPut().apply(this);
+            node.getLparen().apply(this);
+            node.getId().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getRparen().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String rparen = stack.pop();
+            String arr = stack.pop();
+            String id = stack.pop();
+            String lparen = stack.pop();
+            String put = stack.pop();
+
+            temp = put + lparen + id + arr + rparen + semicolon ;
+            stack.push(temp); 
+            temp = "";
 	}
 
 	public void caseAIncrementStmt(AIncrementStmt node){
-		node.getId().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getIncrement().apply(this);
-		node.getSemicolon().apply(this);
+            String parent = myParent ;
+            node.getId().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getIncrement().apply(this);
+            node.getSemicolon().apply(this);
 
-		String semicolon = stack.pop();
-		String increment = stack.pop();
-		String arr = stack.pop();
-		String id = stack.pop();
-                
+            String semicolon = stack.pop();
+            String increment = stack.pop();
+            String arr = stack.pop();
+            String id = stack.pop();
+
+            String scopeId = id + "_" + parent ;
+            
+            if(!symbolTable.containsVar(scopeId)){
                 if(!symbolTable.containsVar(id)){
-                    error.add("The variable " + id + " has not been declared and cannot be incremented.");
+                error.add("The variable " + id + " has not been declared and cannot be incremented.");
                 }
                 else {
                     Variable v = symbolTable.getVar(id);
@@ -733,368 +793,376 @@ public class PrintTree extends DepthFirstAdapter {
                         error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
                     }
                 }
-		
-		temp = id + arr + increment + semicolon;
-		stack.push(temp);
-		temp = "";
+            }
+            else {
+                Variable v = symbolTable.getVar(scopeId);
+                String type = v.getType();
+                if(type.equals("STRING")){
+                    error.add("The variable " + id + " is type STRING and cannot be incremented.");
+                }
+                else if(type.equals("BOOLEAN")){
+                    error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
+                }
+            }
+
+            temp = id + arr + increment + semicolon;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseADecrementStmt(ADecrementStmt node) {
-		node.getId().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getDecrement().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String decrement = stack.pop();
-		String arr = stack.pop();
-		String id = stack.pop();
-                
-                if(!symbolTable.containsVar(id)){
-                    error.add("The variable " + id + " has not been declared and cannot be decremented.");
+            node.getId().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getDecrement().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String decrement = stack.pop();
+            String arr = stack.pop();
+            String id = stack.pop();
+
+            if(!symbolTable.containsVar(id)){
+                error.add("The variable " + id + " has not been declared and cannot be decremented.");
+            }
+            else {
+                Variable v = symbolTable.getVar(id);
+                String type = v.getType();
+                if(type.equals("STRING")){
+                    error.add("The variable " + id + " is type STRING and cannot be decremented.");
                 }
-                else {
-                    Variable v = symbolTable.getVar(id);
-                    String type = v.getType();
-                    if(type.equals("STRING")){
-                        error.add("The variable " + id + " is type STRING and cannot be decremented.");
-                    }
-                    else if(type.equals("BOOLEAN")){
-                        error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
-                    }
+                else if(type.equals("BOOLEAN")){
+                    error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
                 }
-		
-		temp = id + arr + decrement + semicolon;
-		stack.push(temp);
-		temp = "";
+            }
+
+            temp = id + arr + decrement + semicolon;
+            stack.push(temp);
+            temp = "";
 
 	}
 
 	public void caseANewassignmentStmt(ANewassignmentStmt node) {
-		node.getFirstid().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getAssignment().apply(this);
-		node.getNew().apply(this);
-		node.getSecondid().apply(this);
-		node.getLparen().apply(this);
-		node.getRparen().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String rparen = stack.pop();
-		String lparen = stack.pop();
-		String secondid = stack.pop();
-		String newkeyword = stack.pop();
-		String assignment = stack.pop();
-		String optionalid = stack.pop();
-		String id = stack.pop();
-                
-                if(!optionalid.equals("")){
-                    String type = secondid + " Array";
-                    Variable v = new Variable(id, type);
-                    symbolTable.addVar(v);
-                }
-                else {
-                    Variable v = new Variable(id, secondid);
-                    symbolTable.addVar(v);
-                }
-		
-		temp = id + optionalid + assignment + newkeyword + secondid + lparen + rparen + semicolon ;
-		stack.push(temp);
-		temp = "";
+            node.getFirstid().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getAssignment().apply(this);
+            node.getNew().apply(this);
+            node.getSecondid().apply(this);
+            node.getLparen().apply(this);
+            node.getRparen().apply(this);
+            node.getSemicolon().apply(this);
 
+            String semicolon = stack.pop();
+            String rparen = stack.pop();
+            String lparen = stack.pop();
+            String secondid = stack.pop();
+            String newkeyword = stack.pop();
+            String assignment = stack.pop();
+            String optionalid = stack.pop();
+            String id = stack.pop();
+
+            if(!optionalid.equals("")){
+                String type = secondid + " Array";
+                Variable v = new Variable(id, type);
+                symbolTable.addVar(v);
+            }
+            else {
+                Variable v = new Variable(id, secondid);
+                symbolTable.addVar(v);
+            }
+
+            temp = id + optionalid + assignment + newkeyword + secondid + lparen + rparen + semicolon ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAIdvarlisttwoStmt(AIdvarlisttwoStmt node){
-		node.getId().apply(this);
-		node.getLparen().apply(this);
-		node.getVarlisttwo().apply(this);
-		node.getRparen().apply(this);
-		node.getSemicolon().apply(this);
+            node.getId().apply(this);
+            node.getLparen().apply(this);
+            node.getVarlisttwo().apply(this);
+            node.getRparen().apply(this);
+            node.getSemicolon().apply(this);
 
-		String semicolon = stack.pop();
-		String rparen = stack.pop();
-		String varlisttwo = stack.pop();
-		String lparen = stack.pop();
-		String id = stack.pop();
-		
-		temp = id + lparen + varlisttwo + rparen + semicolon ;
-                stack.push(temp);
-		temp = "";
+            String semicolon = stack.pop();
+            String rparen = stack.pop();
+            String varlisttwo = stack.pop();
+            String lparen = stack.pop();
+            String id = stack.pop();
+
+            temp = id + lparen + varlisttwo + rparen + semicolon ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAMultiplevarlisttwoStmt(AMultiplevarlisttwoStmt node) {
-		node.getFirstid().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getPeriod().apply(this);
-		node.getSecondid().apply(this);
-		node.getLparen().apply(this);
-		node.getVarlisttwo().apply(this);
-		node.getRparen().apply(this);
-		node.getOptlidvarlisttwo().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String optlvarlisttwo = stack.pop();
-		String rparen = stack.pop();
-		String varlisttwo = stack.pop();
-		String lparen = stack.pop();
-		String secondid = stack.pop();
-		String period = stack.pop();
-		String optionalid = stack.pop();
-		String id = stack.pop();
-		
-		temp = id + optionalid + period + secondid + lparen + varlisttwo + rparen + optlvarlisttwo + semicolon;
-		stack.push(temp);
-		temp = "";
+            node.getFirstid().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getPeriod().apply(this);
+            node.getSecondid().apply(this);
+            node.getLparen().apply(this);
+            node.getVarlisttwo().apply(this);
+            node.getRparen().apply(this);
+            node.getOptlidvarlisttwo().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String optlvarlisttwo = stack.pop();
+            String rparen = stack.pop();
+            String varlisttwo = stack.pop();
+            String lparen = stack.pop();
+            String secondid = stack.pop();
+            String period = stack.pop();
+            String optionalid = stack.pop();
+            String id = stack.pop();
+
+            temp = id + optionalid + period + secondid + lparen + varlisttwo + rparen + optlvarlisttwo + semicolon;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAReturnStmt(AReturnStmt node){
-		node.getReturn().apply(this);
-		node.getExpr().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String expr = stack.pop();
-		String returnstmt = stack.pop();
-                
-                if(expr.charAt(0) == '"'){
-                    error.add("Cannot return a value that starts with \"");
-                }
-                
-		temp = returnstmt + expr + semicolon ;
-		stack.push(temp);
-		temp = "";
+            node.getReturn().apply(this);
+            node.getExpr().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String expr = stack.pop();
+            String returnstmt = stack.pop();
+
+            if(expr.charAt(0) == '"'){
+                error.add("Cannot return a value that starts with \"");
+            }
+
+            temp = returnstmt + expr + semicolon ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAIdbooleanStmt(AIdbooleanStmt node){
-		node.getId().apply(this);
-		node.getOptionalidarray().apply(this);
-		node.getAssignment().apply(this);
-		node.getBoolean().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String bool = stack.pop();
-                String assignment = stack.pop();
-		String arr = stack.pop();
-		String id = stack.pop();
-                
-                //check if the symbol table contains the var
-                if(!symbolTable.containsVar(id)){
-                    error.add("The variable " + id + " has not been declared and cannot be assigned a value.");
+            node.getId().apply(this);
+            node.getOptionalidarray().apply(this);
+            node.getAssignment().apply(this);
+            node.getBoolean().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String bool = stack.pop();
+            String assignment = stack.pop();
+            String arr = stack.pop();
+            String id = stack.pop();
+
+            //check if the symbol table contains the var
+            if(!symbolTable.containsVar(id)){
+                error.add("The variable " + id + " has not been declared and cannot be assigned a value.");
+            }
+            else { //booleans can only be stored into INT, REAL or BOOLEAN 
+                Variable v = symbolTable.getVar(id);
+                String type = v.getType();
+                if(type.equals("STRING")){
+                    error.add("The variable " + id + " is type STRING and cannot store a boolean value.");
                 }
-                else { //booleans can only be stored into INT, REAL or BOOLEAN 
-                    Variable v = symbolTable.getVar(id);
-                    String type = v.getType();
-                    if(type.equals("STRING")){
-                        error.add("The variable " + id + " is type STRING and cannot store a boolean value.");
-                    }
-                }
-                
-                
-		temp = id + arr + bool + semicolon ;
-		stack.push(temp);
-		temp = "";
+            }
+
+
+            temp = id + arr + bool + semicolon ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseASwitchStmt(ASwitchStmt node){
-		node.getSwitch().apply(this);
-		node.getFirstlparen().apply(this);
-		node.getExpr().apply(this);
-		node.getFirstrparen().apply(this);
-		node.getLcurly().apply(this);
-		node.getCase().apply(this);
-		node.getSecondlparen().apply(this);
-		node.getNumber().apply(this);
-		node.getSecondrparen().apply(this);
-		node.getFirstcolon().apply(this);
-		node.getFirststmtseq().apply(this);
-		node.getOptlbreak().apply(this);
-		node.getOptionalswitchcases().apply(this);
-		node.getDefault().apply(this);
-		node.getSecondcolon().apply(this);
-		node.getSecondstmtseq().apply(this);
-		node.getRcurly().apply(this);
-		
-		String rcurly = stack.pop();
-		String secondstmtseq = stack.pop();
-		String secondcolon = stack.pop();
-		String defaultstmt = stack.pop();
-		String optlswitch = stack.pop();
-		String optlbreak = stack.pop();
-		String stmtseq = stack.pop();
-		String colon = stack.pop();
-		String secondrparen = stack.pop();
-		String number = stack.pop();
-		String secondlparen = stack.pop();
-		String casestmt = stack.pop();
-		String lcurly = stack.pop();
-		String rparen = stack.pop();
-		String expr = stack.pop();
-		String lparen = stack.pop();
-		String switchstmt = stack.pop();
-		
-		temp = switchstmt + lparen + expr + rparen + lcurly + casestmt + secondlparen + number + secondrparen + colon + stmtseq + optlbreak + optlswitch + defaultstmt + secondcolon + secondstmtseq + rcurly ;
-		//System.out.println("switch stmts " + temp );
-		stack.push(temp);
-		temp = "";
+            myParent = "SWITCH";
+            node.getSwitch().apply(this);
+            node.getFirstlparen().apply(this);
+            node.getExpr().apply(this);
+            node.getFirstrparen().apply(this);
+            node.getLcurly().apply(this);
+            node.getCase().apply(this);
+            node.getSecondlparen().apply(this);
+            node.getNumber().apply(this);
+            node.getSecondrparen().apply(this);
+            node.getFirstcolon().apply(this);
+            node.getFirststmtseq().apply(this);
+            node.getOptlbreak().apply(this);
+            node.getOptionalswitchcases().apply(this);
+            node.getDefault().apply(this);
+            node.getSecondcolon().apply(this);
+            node.getSecondstmtseq().apply(this);
+            node.getRcurly().apply(this);
+
+            String rcurly = stack.pop();
+            String secondstmtseq = stack.pop();
+            String secondcolon = stack.pop();
+            String defaultstmt = stack.pop();
+            String optlswitch = stack.pop();
+            String optlbreak = stack.pop();
+            String stmtseq = stack.pop();
+            String colon = stack.pop();
+            String secondrparen = stack.pop();
+            String number = stack.pop();
+            String secondlparen = stack.pop();
+            String casestmt = stack.pop();
+            String lcurly = stack.pop();
+            String rparen = stack.pop();
+            String expr = stack.pop();
+            String lparen = stack.pop();
+            String switchstmt = stack.pop();
+
+            temp = switchstmt + lparen + expr + rparen + lcurly + casestmt + secondlparen + number + secondrparen + colon + stmtseq + optlbreak + optlswitch + defaultstmt + secondcolon + secondstmtseq + rcurly ;
+            //System.out.println("switch stmts " + temp );
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseACommaidlistOptlidlist(ACommaidlistOptlidlist node) {
-		node.getComma().apply(this);
-		node.getId().apply(this);
-		node.getOptlidlist().apply(this);
+            node.getComma().apply(this);
+            node.getId().apply(this);
+            node.getOptlidlist().apply(this);
 
-		String optlid = stack.pop();
-		String id = stack.pop();
-		String comma = stack.pop();
-		
-		temp = comma + id + optlid ;
-		//System.out.println("Optlidlist " + temp);
-		stack.push(temp);
-		temp = "";
+            String optlid = stack.pop();
+            String id = stack.pop();
+            String comma = stack.pop();
+
+            temp = comma + id + optlid ;
+            //System.out.println("Optlidlist " + temp);
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAEmptyproductionOptlidlist(AEmptyproductionOptlidlist node) {
-		stack.push("");
+            stack.push("");
 	}
 
 	public void caseANoelseOptionalelse(ANoelseOptionalelse node){	
-		node.getLcurly().apply(this);
-		node.getStmtseq().apply(this);
-		node.getRcurly().apply(this);
+            node.getLcurly().apply(this);
+            node.getStmtseq().apply(this);
+            node.getRcurly().apply(this);
 
-		String rcurly = stack.pop();
-		String stmtseq = stack.pop();
-		String lcurly = stack.pop();
-		
-		temp = lcurly + stmtseq + rcurly ;
-		//System.out.println("Noelse " + temp);
-		stack.push(temp);
-		temp = "";
+            String rcurly = stack.pop();
+            String stmtseq = stack.pop();
+            String lcurly = stack.pop();
+
+            temp = lcurly + stmtseq + rcurly ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAElseOptionalelse(AElseOptionalelse node){
-		node.getFirstlcurly().apply(this);
-		node.getFirststmtseq().apply(this);
-		node.getFirstrcurly().apply(this);
-		node.getElse().apply(this);
-		node.getSecondlcurly().apply(this);
-		node.getSecondstmtseq().apply(this);
-		node.getSecondrcurly().apply(this);
-		
-		String secondrcurly = stack.pop();
-		String secondstmtseq = stack.pop();
-		String secondlcurly = stack.pop();
-		String elsestmt = stack.pop();
-		String rcurly = stack.pop();
-		String stmtseq = stack.pop();
-		String lcurly = stack.pop();
+            myParent = "ELSE" ;
+            node.getFirstlcurly().apply(this);
+            node.getFirststmtseq().apply(this);
+            node.getFirstrcurly().apply(this);
+            node.getElse().apply(this);
+            node.getSecondlcurly().apply(this);
+            node.getSecondstmtseq().apply(this);
+            node.getSecondrcurly().apply(this);
 
-		temp = lcurly + stmtseq + rcurly + elsestmt + secondlcurly + secondstmtseq + secondrcurly ;
-		//System.out.println("Optlelse " + temp);
-		stack.push(temp);
-		temp = "";
+            String secondrcurly = stack.pop();
+            String secondstmtseq = stack.pop();
+            String secondlcurly = stack.pop();
+            String elsestmt = stack.pop();
+            String rcurly = stack.pop();
+            String stmtseq = stack.pop();
+            String lcurly = stack.pop();
+
+            temp = lcurly + stmtseq + rcurly + elsestmt + secondlcurly + secondstmtseq + secondrcurly ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseACaselistOptionalswitchcases(ACaselistOptionalswitchcases node){
-		node.getCase().apply(this);
-		node.getLparen().apply(this);
-		node.getNumber().apply(this);
-		node.getRparen().apply(this);
-		node.getColon().apply(this);
-		node.getStmtseq().apply(this);
-		node.getOptlbreak().apply(this);
-		node.getOptionalswitchcases().apply(this);
-		
-		String optlswitches = stack.pop();
-		String br = stack.pop();
-		String stmtseq = stack.pop();
-		String colon = stack.pop();
-		String rparen = stack.pop();
-		String number = stack.pop();
-		String lparen = stack.pop();
-		String cases = stack.pop();
-		
-		temp = cases + lparen + number + rparen + colon + stmtseq + br + optlswitches ;
-		//System.out.println("switch cases " + temp);
-		stack.push(temp);
-		temp = "";
+            node.getCase().apply(this);
+            node.getLparen().apply(this);
+            node.getNumber().apply(this);
+            node.getRparen().apply(this);
+            node.getColon().apply(this);
+            node.getStmtseq().apply(this);
+            node.getOptlbreak().apply(this);
+            node.getOptionalswitchcases().apply(this);
+
+            String optlswitches = stack.pop();
+            String br = stack.pop();
+            String stmtseq = stack.pop();
+            String colon = stack.pop();
+            String rparen = stack.pop();
+            String number = stack.pop();
+            String lparen = stack.pop();
+            String cases = stack.pop();
+
+            temp = cases + lparen + number + rparen + colon + stmtseq + br + optlswitches ;
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseAEmptyproductionOptionalswitchcases(AEmptyproductionOptionalswitchcases node) {
-		stack.push("");
+            stack.push("");
 	}
 
 	public void caseABreakOptlbreak(ABreakOptlbreak node){
-		node.getBreak().apply(this);
-		node.getSemicolon().apply(this);
-		
-		String semicolon = stack.pop();
-		String br = stack.pop();
-		temp = br + semicolon;
-		//System.out.println("optlbreak " + temp);
-		stack.push(temp);
-		temp = "" ;
+            node.getBreak().apply(this);
+            node.getSemicolon().apply(this);
+
+            String semicolon = stack.pop();
+            String br = stack.pop();
+            temp = br + semicolon;
+            stack.push(temp);
+            temp = "" ;
 	}
 
 	public void caseAEmptyproductionOptlbreak(AEmptyproductionOptlbreak node) {
-		stack.push("");
+            stack.push("");
 	}
 
 	public void caseAIncrementOrstmts(AIncrementOrstmts node) {
-		node.getId().apply(this);
-		node.getIncrement().apply(this);
-		
-		String incr = stack.pop();
-		String id = stack.pop();
-                
-                if(!symbolTable.containsVar(id)){
-                    error.add("The variable " + id + " has not been declared and cannot be incremented.");
+            node.getId().apply(this);
+            node.getIncrement().apply(this);
+
+            String incr = stack.pop();
+            String id = stack.pop();
+
+            if(!symbolTable.containsVar(id)){
+                error.add("The variable " + id + " has not been declared and cannot be incremented.");
+            }
+            else {
+                Variable v = symbolTable.getVar(id);
+                String type = v.getType();
+                if(type.equals("STRING")){
+                    error.add("The variable " + id + " is type STRING and cannot be incremented.");
                 }
-                else {
-                    Variable v = symbolTable.getVar(id);
-                    String type = v.getType();
-                    if(type.equals("STRING")){
-                        error.add("The variable " + id + " is type STRING and cannot be incremented.");
-                    }
-                    else if(type.equals("BOOLEAN")){
-                        error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
-                    }
+                else if(type.equals("BOOLEAN")){
+                    error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
                 }
-		
-		temp = id + incr;
-		//System.out.println("increment " + temp );
-		stack.push(temp);
-		temp = "";
+            }
+
+            temp = id + incr;
+            //System.out.println("increment " + temp );
+            stack.push(temp);
+            temp = "";
 	}
 
 	public void caseADecrementOrstmts(ADecrementOrstmts node) {
-		node.getId().apply(this);
-		node.getDecrement().apply(this);
-		
-		String decr = stack.pop();
-		String id = stack.pop();
-		
-                if(!symbolTable.containsVar(id)){
-                    error.add("The variable " + id + " has not been declared and cannot be decremented.");
+            node.getId().apply(this);
+            node.getDecrement().apply(this);
+
+            String decr = stack.pop();
+            String id = stack.pop();
+
+            if(!symbolTable.containsVar(id)){
+                error.add("The variable " + id + " has not been declared and cannot be decremented.");
+            }
+            else {
+                Variable v = symbolTable.getVar(id);
+                String type = v.getType();
+                if(type.equals("STRING")){
+                    error.add("The variable " + id + " is type STRING and cannot be decremented.");
                 }
-                else {
-                    Variable v = symbolTable.getVar(id);
-                    String type = v.getType();
-                    if(type.equals("STRING")){
-                        error.add("The variable " + id + " is type STRING and cannot be decremented.");
-                    }
-                    else if(type.equals("BOOLEAN")){
-                        error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
-                    }
+                else if(type.equals("BOOLEAN")){
+                    error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
                 }
-                
-		temp = id + decr;
-		//System.out.println("decrement " + temp );
-		stack.push(temp);
-		temp = "";
+            }
+
+            temp = id + decr;
+            //System.out.println("decrement " + temp );
+            stack.push(temp);
+            temp = "";
 
 	}
 
@@ -1118,16 +1186,17 @@ public class PrintTree extends DepthFirstAdapter {
                         error.add("The variable " + id + " is type INT and cannot store a real number.");
                     }
                 }
+                 else if(type.equals("BOOLEAN")){
+                    if(!expr.equals("TRUE") || !expr.equals("FALSE")){
+                        error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
+                    }
+                }
                 else if(type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")){
                     if(expr.charAt(0) == '"'){
                         error.add("The variable " + id + " is type " + type + " and cannot store a string");
                     }
                 }
-                else if(type.equals("BOOLEAN")){
-                    if(!expr.equals("TRUE") || !expr.equals("FALSE")){
-                        error.add("The variable " + id + " is type BOOLEAN and can only store boolean values") ;
-                    }
-                }
+               
             }
 
 
@@ -1269,12 +1338,62 @@ public class PrintTree extends DepthFirstAdapter {
 
 	public void caseAMultipleExpr(AMultipleExpr node) {
 		node.getExpr().apply(this);
+                boolean exprIsId = isId ; 
+                isId = false;
 		node.getAddop().apply(this);
 		node.getTerm().apply(this);
+                boolean termIsId = isId ;
+                isId = false;
 		
 		String term = stack.pop();
 		String addop = stack.pop();
 		String expr = stack.pop();
+                
+                Variable t ;
+                Variable e ;
+                String termType = "" ;
+                String exprType = "" ;
+                
+                if(termIsId){
+                    t = symbolTable.getVar(term);
+                    termType = t.getType();
+                }
+                else if(term.contains("\"")){
+                    error.add(term + " is a STRING. Cannot add a string literal.");
+                }
+                
+                if(exprIsId){
+                    e = symbolTable.getVar(expr) ;
+                    exprType = e.getType();
+                }
+                else if(expr.contains("\"")){
+                    error.add(expr + " is a STRING. Cannot add a string literal.");
+                }
+                
+                if(termType.equals("STRING")){
+                    if(exprType.equals("STRING")){
+                        error.add("The variable " + term + " is type STRING. Cannot add a string literal.");
+                        error.add("The variable " + expr + " is type STRING. Cannot add a string literal.");
+                    }
+                    else {
+                        if(!exprType.equals("") && !exprType.equals("STRING")){
+                            error.add("The varialbe " + term + " is type STRING."
+                                + " Cannot add a string literal with a " + exprType + " .");
+                        }
+                        else {
+                            error.add("The variable " + term + " is type STRING. Cannot add a string literal.");
+                        }
+                        
+                    }
+                }
+                
+                if(exprType.equals("STRING") && (!termType.equals("STRING") && !termType.equals(""))){
+                    error.add("The varialbe " + expr + " is type STRING."
+                                + " Cannot add a string literal with a " + termType + " .");
+                }
+                else if(exprType.equals("STRING")){
+                    error.add("The variable " + expr + " is type STRING. Cannot add a string literal.");
+                }
 		
 		temp = expr + addop + term ;
 		//System.out.println("MultipleExpr " + temp);
@@ -1293,12 +1412,58 @@ public class PrintTree extends DepthFirstAdapter {
 
 	public void caseATermmultopTerm(ATermmultopTerm node) {
 		node.getTerm().apply(this);
+                boolean termIsId = isId ;
+                isId = false ;
 		node.getMultop().apply(this);
 		node.getFactor().apply(this);
+                boolean factorIsId = isId ;
+                isId = false;
 
 		String factor = stack.pop();
 		String mult = stack.pop();
 		String term = stack.pop();
+                
+                Variable t ;
+                Variable f ;
+                String termType = "";
+                String factorType = "";
+                
+                //if they're id's get the type
+                if(termIsId){
+                    if(symbolTable.containsVar(term)){
+                        t = symbolTable.getVar(term);
+                        termType = t.getType();
+                        if(termType.equals("STRING")){
+                            error.add("The variable " + term + " is type STRING. Cannot multiply a string literal.");
+                        }
+                    }
+                    else {
+                        error.add("The variable " + term + " has not been declared. "
+                                + "Cannot multiply an undeclared variable.");
+                    }
+                }
+                else if(term.contains("\"")){
+                    error.add(term + " is a STRING. Cannot multiply a string literal.");
+                }
+                
+                if(factorIsId){
+                    if(symbolTable.containsVar(factor)){
+                        f = symbolTable.getVar(factor) ;
+                        factorType = f.getType();
+                        if(factorType.equals("STRING")){
+                            error.add("The variable " + factor + " is type STRING. Cannot multiply a string literal.");
+                        }
+                    }
+                    else {
+                        error.add("The variable " + factor + " has not been declared."
+                                + " Cannot multiply an undeclared variable.");
+                    }
+                    
+                }
+                else if(factor.contains("\"")){
+                    error.add(factor + " is a STRING. Cannot multiply a string literal.");
+                }
+                
 		
 		temp = term + mult + factor;
 		//System.out.println("TermMultop " + temp);
@@ -1334,9 +1499,19 @@ public class PrintTree extends DepthFirstAdapter {
 	public void caseAMinusfactorFactor(AMinusfactorFactor node) {
 		node.getMinus().apply(this);
 		node.getFactor().apply(this);
+                boolean isFactorId = isId ;
+                isId = false ;
 		
 		String factor = stack.pop();
 		String minus = stack.pop();
+                
+                if(isFactorId){
+                    Variable v = symbolTable.getVar(factor);
+                    String type = v.getType();
+                    if(type.equals("STRING")){
+                        error.add("The variable " + factor + " is type STRING. Cannot - a string literal.");
+                    }
+                }
 		
 		temp = minus + factor ;
 		//System.out.println("minusfactor " + temp);
@@ -1362,7 +1537,6 @@ public class PrintTree extends DepthFirstAdapter {
 
 	public void caseAIdarrayFactor(AIdarrayFactor node) {
 		node.getArrayorid().apply(this);
-		
 		temp = stack.pop();
 		//System.out.println("IdarrayFactor " + temp );
 		stack.push(temp);
@@ -1428,6 +1602,8 @@ public class PrintTree extends DepthFirstAdapter {
 	
 	public void caseAIdArrayorid(AIdArrayorid node) {
 		node.getId().apply(this);
+                
+                isId = true;
 		temp = stack.pop();
 		//System.out.println("idarrayorid " + temp);
 		stack.push(temp);
@@ -1496,18 +1672,57 @@ public class PrintTree extends DepthFirstAdapter {
 	}
 
 	public void caseACondexpr(ACondexpr node) {
-		node.getFirstexpr().apply(this);
-		node.getCond().apply(this);
-		node.getSecondexpr().apply(this);
-		
-		String secondexpr = stack.pop();
-		String cond = stack.pop();
-		String firstexpr = stack.pop();
-		
-		temp = firstexpr + cond + secondexpr ;
-		//System.out.println("condexpr : " + temp);
-		stack.push(temp);
-		temp = "";
+            node.getFirstexpr().apply(this);
+            boolean isFirstExprId = isId ;
+            isId = false;
+            node.getCond().apply(this);
+            node.getSecondexpr().apply(this);
+            boolean isSecondExprId = isId ;
+            isId = false;
+
+            String secondexpr = stack.pop();
+            String cond = stack.pop();
+            String firstexpr = stack.pop();
+            Variable firstExpVar ;
+            Variable secondExpVar ;
+            String firstExpType = "" ;
+            String secondExpType = "" ;
+            
+            if(isFirstExprId){
+                if(symbolTable.containsVar(firstexpr)){
+                    firstExpVar = symbolTable.getVar(firstexpr);
+                    firstExpType = firstExpVar.getType();
+                }
+                else {
+                    error.add("The variable " + firstexpr + " has not been declared."
+                            + " A variable must be declared before it can be used in a conditional expression.");
+                }
+            }
+            
+            if(isSecondExprId){
+                if(symbolTable.containsVar(secondexpr)){
+                    secondExpVar = symbolTable.getVar(secondexpr);
+                    secondExpType = secondExpVar.getType();
+                }
+                else {
+                    error.add("The variable " + secondexpr + " has not been declared."
+                            + " A variable must be declared before it can be used in a conditional expression.");
+                }
+            }
+            
+            if(secondExpType.equals("STRING")){
+                error.add("The variable " + secondexpr + " is type STRING."
+                        + " Cannot use a string in a condiitonal expression.");
+            }
+
+            if(firstExpType.equals("STRING")){
+                error.add("The variable " + firstexpr + " is type STRING."
+                        + " Cannot use a strin gin a conditional expression.");
+            }
+
+            temp = firstexpr + cond + secondexpr ;
+            stack.push(temp);
+            temp = "";
 		
 	}
 
