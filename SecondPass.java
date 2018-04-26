@@ -22,6 +22,7 @@ public class SecondPass extends DepthFirstAdapter {
         private int lastOutReg = 0 ;
         private boolean[] regStatus = {false , false , false , false , false , false , false , false} ;
         private boolean[] outRegStatus = {false , false , false , false , false , false , false , false} ;
+        private List<String> switchConds = new ArrayList<>() ;
 
 	public SecondPass(SymbolTable st) {
             symbolTable = st ;
@@ -56,10 +57,26 @@ public class SecondPass extends DepthFirstAdapter {
                     //System.out.println(key);
                     v = (Variable) (m.get(key));
                     type = v.getType();
+                    System.out.println(type) ;
                     if(type.equals("STRING")){
                         dataPart = dataPart + key + ": .asciiz " + v.getValue() + "\n.align 2 \n" ;
                     }
-                    else {
+                    else if(type.equals("INT_ARRAY") || type.equals("BOOLEAN_ARRAY"))
+                    {
+                        String value = v.getValue() ;
+                        int val = Integer.parseInt(value) ;
+                        val = val * 4 ;
+                        dataPart = dataPart + key + ": .space " + val + "\n" ;
+                    }
+                    else if(type.equals("REAL_ARRAY"))
+                    {
+                        String value = v.getValue() ;
+                        int val = Integer.parseInt(value) ;
+                        val = val * 8 ;
+                        dataPart = dataPart + key + ": .space " + val + "\n" ;
+                    }
+                    else
+                    {
                         declareVar(key, type);
                     }
                     
@@ -1024,42 +1041,61 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseASwitchStmt(ASwitchStmt node){
-		node.getSwitch().apply(this);
-                
-                String switchNum = "_" + switchCount ;
-                switchCount++ ;
-                
-                String caseBreak = "" ;
-                String caseParts = "" ;
-                
+		String switchNum = "_" + switchCount ;
+                int switchIndex = switchCount ;
+                switchCount ++ ;
+            
+                node.getSwitch().apply(this);       
 		node.getFirstlparen().apply(this);
 		node.getExpr().apply(this);
+                
+                codePart = codePart + "move $t0 , $s" + lastOutReg + "\n" ;
+                
 		node.getFirstrparen().apply(this);
 		node.getLcurly().apply(this);
 		node.getCase().apply(this);
 		node.getSecondlparen().apply(this);
 		node.getNumber().apply(this);
+                String num = stack.peek() ;
+                codePart = codePart + "li $t1 , " + num + "\n" ;
+                codePart = codePart + "beq $t0 , $t1 , CASE" + switchNum + "_" + num + "\n" ;
                 
-                String caseVal = stack.peek() ;
-                caseBreak = caseBreak + "li $t" + lastInReg + " , " + caseVal + "\n" ;
-                caseBreak = caseBreak + "beq $s" + lastOutReg + " , $t" + lastInReg + "CASE" + switchNum + "_" + caseVal + "\n" ;
+                int preCaseLen = codePart.length() ;
                 
 		node.getSecondrparen().apply(this);
 		node.getFirstcolon().apply(this);
                 
-                codePart = codePart + "CASE" + switchNum + "_"+ caseVal + ": \n" ;
+                codePart = codePart + "START_SWITCH" + switchNum + ":\n" ;
+                codePart = codePart + "CASE" + switchNum + "_" + num + ": \n" ;
+                
 		node.getFirststmtseq().apply(this);
 		node.getOptlbreak().apply(this);
-		node.getOptionalswitchcases().apply(this);
-		node.getDefault().apply(this);
+                String optBreak = stack.peek() ;
+                if(!optBreak.equals(""))
+                {
+                    codePart = codePart + "b END_SWITCH" + switchNum + "\n" ;
+                }
+                freeAllReg() ;
                 
-                codePart = codePart + "DEFAULT" + switchNum + ":\n" ;
+		node.getOptionalswitchcases().apply(this);
+		node.getDefault().apply(this);     
+                
+                codePart = codePart + "DEFAULT" + switchNum + ": \n" ;
                 
 		node.getSecondcolon().apply(this);
 		node.getSecondstmtseq().apply(this);
-		node.getRcurly().apply(this);
-		
-                codePart = codePart + "END_SWITCH" + switchNum + ":\n" ;
+		node.getRcurly().apply(this); 
+                
+                codePart = codePart + "END_SWITCH" + switchNum + ": \n" ;
+                
+                int postCaseLen = codePart.length() ;
+                
+                String switchCond = switchConds.get(switchIndex) ;
+                String casePart = codePart.substring(preCaseLen , postCaseLen) ;
+                codePart = codePart.substring(0 , preCaseLen) ;
+                codePart = codePart + switchCond ;
+                codePart = codePart + "b DEFAULT" + switchNum + "\n" ;
+                codePart = codePart + casePart ;
                 
 		String rcurly = stack.pop();
 		String secondstmtseq = stack.pop();
@@ -1082,8 +1118,6 @@ public class SecondPass extends DepthFirstAdapter {
 		temp = switchstmt + lparen + expr + rparen + lcurly + casestmt + secondlparen + number + secondrparen + colon + stmtseq + optlbreak + optlswitch + defaultstmt + secondcolon + secondstmtseq + rcurly ;
 		stack.push(temp);
 		temp = "";
-                
-                codePart = codePart + caseBreak + caseParts ;
 	}
 
 	public void caseACommaidlistOptlidlist(ACommaidlistOptlidlist node) {
@@ -1164,15 +1198,41 @@ public class SecondPass extends DepthFirstAdapter {
 	}
 
 	public void caseACaselistOptionalswitchcases(ACaselistOptionalswitchcases node){
-		node.getCase().apply(this);
+                String switchNum = "_" + (switchCount - 1) ;
+                String switchCond = new String() ;
+                if(switchConds.isEmpty())
+                {
+                    switchCond = "" ;
+                }
+                else
+                {
+                    switchCond = switchConds.get(switchCount - 1) ;
+                }
+                
+                node.getCase().apply(this);
 		node.getLparen().apply(this);
 		node.getNumber().apply(this);
+                
+                String num = stack.peek() ;
+                switchCond = switchCond + "li $t1 , " + num + "\n" ;
+                switchCond = switchCond + "beq $t0 , $t1 , CASE" + switchNum + "_" + num + "\n" ;
+                
 		node.getRparen().apply(this);
 		node.getColon().apply(this);
+                
+                codePart = codePart + "CASE" + switchNum + "_" + num + ": \n" ;
+                
 		node.getStmtseq().apply(this);
 		node.getOptlbreak().apply(this);
+                String optBreak = stack.peek() ;
+                if(!optBreak.equals(""))
+                {
+                    codePart = codePart + "b END_SWITCH" + switchNum + "\n";
+                }
+                freeAllReg() ;
+                switchConds.add(switchCount - 1 , switchCond) ;
 		node.getOptionalswitchcases().apply(this);
-		
+                
 		String optlswitches = stack.pop();
 		String br = stack.pop();
 		String stmtseq = stack.pop();
@@ -1185,7 +1245,7 @@ public class SecondPass extends DepthFirstAdapter {
 		temp = cases + lparen + number + rparen + colon + stmtseq + br + optlswitches ;
 		//System.out.println("switch cases " + temp);
 		stack.push(temp);
-		temp = "";
+		temp = "";   
 	}
 
 	public void caseAEmptyproductionOptionalswitchcases(AEmptyproductionOptionalswitchcases node) {
