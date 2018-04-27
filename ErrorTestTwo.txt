@@ -1,0 +1,46 @@
+BEGIN
+	x : INT ;
+	y : REAL ;
+	z : STRING ;
+	VOID MAIN() {
+		z := "HELLO WORLD!" ;
+		
+		PUT( z ) ; 
+		
+		x := 4.5 ;
+		
+		FOR(INT i := 0; i < x ; i++ ) {
+			q : BOOLEAN ;
+			q := TRUE ;
+			
+			IF(q) THEN {
+				y := 8.5;
+				x := 10 ;
+				x := x + y ; 
+				z := "The answer is " + x ;
+				PUT(z) ;
+			}
+		}
+		
+		WHILE( h < y ) {
+			a : INT ;
+			a := 10 ;
+			x : REAL ;
+			x := 104.289 ; 
+			
+			a := a + x ; 
+			PUT ( a ) ;
+			h := h + 1 ; 
+			
+			IF (h < a ) THEN {
+				PUT (h) ;
+			}
+			ELSE {
+				r : BOOLEAN ;
+				r := "a is less than h" ;
+				PUT (r) ;
+				r++; 
+			}
+		}
+	}
+END 
