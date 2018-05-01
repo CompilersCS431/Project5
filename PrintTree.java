@@ -5,18 +5,18 @@ import ProjFive.node.*;
 import java.util.*;
 
 public class PrintTree extends DepthFirstAdapter {
-    public SymbolTable symbolTable;
+    public static SymbolTable symbolTable;
     private Stack < String > stack;
     private String temp;
     public ArrayList < String > error;
-    private boolean isId;
+    private boolean isId, inClass, inMethod;
     private String myParent;
     private String prevParent;
-	private int forCount ;
-	private int whileCount ;
-	private int switchCount ;
-	private int ifCount ;
-	private int elseCount ;
+    private int forCount ;
+    private int whileCount ;
+    private int switchCount ;
+    private int ifCount ;
+    public static ArrayList<String> parentArr ;
 
     public PrintTree() {
         symbolTable = new SymbolTable();
@@ -30,7 +30,9 @@ public class PrintTree extends DepthFirstAdapter {
         whileCount = 0;
         switchCount = 0 ;
         ifCount = 0;
-        elseCount = 0;
+        parentArr = new ArrayList<>() ;
+        inClass = false ;
+        inMethod = false ;
     }
 
     public void caseAProg(AProg node) {
@@ -48,9 +50,21 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push("");
     }
 
-    public void caseAClassdeclClassmethodstmt(AClassdeclClassmethodstmt node) {
+    public void caseAClassdeclClassmethodstmt(AClassdeclClassmethodstmt node) { //class declaration
+        inClass = true ;
+        
         node.getTclass().apply(this);
         node.getId().apply(this);
+        
+        //add class to symbol table
+        String peekId = stack.peek() ;
+        Classes c = new Classes(peekId) ;
+        symbolTable.addClass(c) ;
+        String tempPrevParent = prevParent;
+        prevParent = myParent;
+        myParent = peekId ;
+        parentArr.add(0, peekId) ;
+        
         node.getLcurly().apply(this);
         node.getMethodstmtseqs().apply(this);
         node.getRcurly().apply(this);
@@ -65,17 +79,19 @@ public class PrintTree extends DepthFirstAdapter {
         //System.out.println("class decl " + temp);
         stack.push(temp);
         temp = "";
+        
+        //reset the scope
+        myParent = prevParent;
+        prevParent = tempPrevParent;
+        
+        inClass = false ;
     }
 
-    public void caseATypevarliststmtClassmethodstmt(ATypevarliststmtClassmethodstmt node) {
+    public void caseATypevarliststmtClassmethodstmt(ATypevarliststmtClassmethodstmt node) { //global method declaration
+        inMethod = true ;
+        
         node.getType().apply(this);
         node.getId().apply(this);
-		
-        String parentId = stack.peek();
-        String tempPrevParent = prevParent;
-        prevParent = myParent;
-        myParent = parentId;
-		
         node.getLparen().apply(this);
         node.getVarlist().apply(this);
         node.getRparen().apply(this);
@@ -107,25 +123,27 @@ public class PrintTree extends DepthFirstAdapter {
             }
         }
 
+        //error checking that the type matches the return type 
         if (type.equals("VOID")) {
             if (stmtseq.contains("RETURN")) {
-                error.add("Void method cannot return value;");
+                error.add("Error in " + id + ". Void method cannot return value;");
             }
+        }
+        else
+        {
+            //check for other return statements 
         }
 
         symbolTable.addMethod(m);
 
         temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly;
-        //System.out.println("varlist classmethodstmt " + temp);
         stack.push(temp);
         temp = "";
-
-        //reset the scope
-        myParent = prevParent;
-        prevParent = tempPrevParent;
+        
+        inMethod = false; 
     }
 
-    public void caseAIdlisttypeClassmethodstmt(AIdlisttypeClassmethodstmt node) {
+    public void caseAIdlisttypeClassmethodstmt(AIdlisttypeClassmethodstmt node) { //global var declarations
         node.getId().apply(this);
         node.getOptlidlist().apply(this);
         node.getColon().apply(this);
@@ -137,7 +155,7 @@ public class PrintTree extends DepthFirstAdapter {
         String colon = stack.pop();
         String idlist = stack.pop();
         String id = stack.pop();
-
+        
         Variable v = new Variable(id, type);
         symbolTable.addVar(v);
 
@@ -163,7 +181,6 @@ public class PrintTree extends DepthFirstAdapter {
         String methodstmtseq = stack.pop();
 
         temp = methodstmtseq + methodstmtseqs;
-        //System.out.println("one or more methodstmtseq " + temp );
         stack.push(temp);
         temp = "";
     }
@@ -172,9 +189,20 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push("");
     }
 
-    public void caseATypevarlistMethodstmtseq(ATypevarlistMethodstmtseq node) {
+    public void caseATypevarlistMethodstmtseq(ATypevarlistMethodstmtseq node) { //method declaration in class
+        inMethod = true ;
+        //get the class
+        Classes c = symbolTable.getMyClass(myParent) ;
+        
+        String tempPrevParent = prevParent ;
+        prevParent = myParent ;
+        
         node.getType().apply(this);
         node.getId().apply(this);
+        
+        String peekId = stack.peek() ;
+        myParent = peekId ;
+        
         node.getLparen().apply(this);
         node.getVarlist().apply(this);
         node.getRparen().apply(this);
@@ -204,15 +232,24 @@ public class PrintTree extends DepthFirstAdapter {
                 m.addParam(v);
             }
         }
-
-        symbolTable.addMethod(m);
+        
+        c.addMethod(m);
+        symbolTable.addClass(c) ;
 
         temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly;
         stack.push(temp);
         temp = "";
+        
+        //reset the scope
+        myParent = prevParent;
+        prevParent = tempPrevParent;
+        
+        inMethod = false ;
     }
 
-    public void caseAIdtypeMethodstmtseq(AIdtypeMethodstmtseq node) {
+    public void caseAIdtypeMethodstmtseq(AIdtypeMethodstmtseq node) { //in class still
+        Classes c = symbolTable.getMyClass(myParent) ;
+        
         node.getId().apply(this);
         node.getOptlidlist().apply(this);
         node.getColon().apply(this);
@@ -226,21 +263,25 @@ public class PrintTree extends DepthFirstAdapter {
         String id = stack.pop();
 
         Variable v = new Variable(id, type);
-        symbolTable.addVar(v);
+        c.addVar(v);
         if (!idlist.equals("")) {
             String[] ids = idlist.split(",");
             for (int i = 0; i < ids.length; i++) {
-                Variable
-                var = new Variable(ids[i], type);
-            }
+                Variable var = new Variable(ids[i], type);
+                c.addVar(var) ;
+             }
         }
+        
+        symbolTable.addClass(c) ;
 
         temp = id + idlist + colon + type + semicolon;
         stack.push(temp);
         temp = "";
     }
 
-    public void caseAAssignstringMethodstmtseq(AAssignstringMethodstmtseq node) {
+    public void caseAAssignstringMethodstmtseq(AAssignstringMethodstmtseq node) { //in class - string declaration
+        Classes c = symbolTable.getMyClass(myParent) ;
+        
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -252,13 +293,39 @@ public class PrintTree extends DepthFirstAdapter {
         String assignment = stack.pop();
         String arr = stack.pop();
         String id = stack.pop();
-
+        
+        int i = -1 ;
+        if(!arr.equals(""))
+        {
+            String temp = arr.replaceAll("[", "") ;
+            temp = temp.replaceAll("]", "") ;
+            i = Integer.parseInt(temp.trim()) ;
+        }
+        
+        if(c.containsVar(id))
+        {
+            Variable v = c.getVar(id) ;
+            v.setValue(anychars);
+            if(i > -1)
+            {
+                v.setIndex(i);
+            }
+        }
+        else 
+        {
+            error.add("Error in " + myParent + ". The variable " + id + " has not"
+                    + "been declared and cannot be assigned a string.") ;
+        }
+       
+           
         temp = id + arr + assignment + anychars + semicolon;
         stack.push(temp);
         temp = "";
     }
 
-    public void caseAPrintstmtMethodstmtseq(APrintstmtMethodstmtseq node) {
+    public void caseAPrintstmtMethodstmtseq(APrintstmtMethodstmtseq node) { //pirnt statement inside classes
+        Classes c = symbolTable.getMyClass(myParent) ;
+        
         node.getPut().apply(this);
         node.getLparen().apply(this);
         node.getId().apply(this);
@@ -272,6 +339,12 @@ public class PrintTree extends DepthFirstAdapter {
         String id = stack.pop();
         String lparen = stack.pop();
         String put = stack.pop();
+        
+        if(!c.containsVar(id))
+        {
+            error.add("Error in " + myParent + ". The variable " + id + " has not"
+                    + "been declared and cannot be assigned a string.") ;
+        } 
 
         temp = put + lparen + id + arr + rparen + semicolon;
         stack.push(temp);
@@ -279,6 +352,8 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAAssignmentMethodstmtseq(AAssignmentMethodstmtseq node) {
+        Classes c = symbolTable.getMyClass(myParent) ;
+        
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -294,13 +369,20 @@ public class PrintTree extends DepthFirstAdapter {
         String assignment = stack.pop();
         String arr = stack.pop();
         String id = stack.pop();
+        
+        if(!c.containsVar(id))
+        {
+            error.add("Error in " + myParent + ". The variable " + id + " has not been declared yet." ) ;
+        }
 
         temp = id + arr + assignment + get + lparen + rparen + semicolon;
         stack.push(temp);
         temp = "";
     }
 
-    public void caseAIncrementMethodstmtseq(AIncrementMethodstmtseq node) {
+    public void caseAIncrementMethodstmtseq(AIncrementMethodstmtseq node) { //still in class
+        Classes c = symbolTable.getMyClass(myParent) ;
+        
         String parent = myParent ;
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
@@ -311,37 +393,20 @@ public class PrintTree extends DepthFirstAdapter {
         String incr = stack.pop();
         String arr = stack.pop();
         String id = stack.pop();
-
-        String scopeId = id + "_" + parent ;
         
-        if (!symbolTable.containsVar(scopeId)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " has not been declared and cannot be incremented.");
-            } else {
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("STRING")) {
-                    error.add("The variable " + id + " is type STRING and cannot be incremented.");
-                } else if (type.equals("BOOLEAN")) {
-                    error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
-                }
-            }
-        } else {
-            Variable v = symbolTable.getVar(scopeId);
-            String type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("The variable " + id + " is type STRING and cannot be incremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
-            }
-        }
-
         temp = id + arr + incr + semicolon;
         stack.push(temp);
         temp = "";
+        
+        if(!c.containsVar(id))
+        {
+            error.add("Error in " + myParent + ". The variable " + id + " has not been declared yet." ) ;
+        }
     }
 
-    public void caseADecrementMethodstmtseq(ADecrementMethodstmtseq node) {
+    public void caseADecrementMethodstmtseq(ADecrementMethodstmtseq node) { 
+        Classes c = symbolTable.getMyClass(myParent) ;
+        
         String parent = myParent ;
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
@@ -352,35 +417,14 @@ public class PrintTree extends DepthFirstAdapter {
         String decr = stack.pop();
         String arr = stack.pop();
         String id = stack.pop();
-
-        String scopeId = id + "_" + parent ;
-        
-        if (!symbolTable.containsVar(scopeId)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " has not been declared and cannot be decremented.");
-            } else {
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("STRING")) {
-                    error.add("The variable " + id + " is type STRING and cannot be decremented.");
-                } else if (type.equals("BOOLEAN")) {
-                    error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
-                }
-            }
-        } else {
-            Variable v = symbolTable.getVar(scopeId);
-            String type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("The variable " + id + " is type STRING and cannot be decremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
-            }
-        }
-
         temp = id + arr + decr + semicolon;
-        //System.out.println("decr methodstmtseq " + temp);
         stack.push(temp);
         temp = "";
+
+        if(!c.containsVar(id))
+        {
+            error.add("Error in " + myParent + ". The variable " + id + " has not been declared yet." ) ;
+        }
     }
 
     public void caseADeclobjectMethodstmtseq(ADeclobjectMethodstmtseq node) {
@@ -400,24 +444,26 @@ public class PrintTree extends DepthFirstAdapter {
         String newstmt = stack.pop();
         String assignment = stack.pop();
         String arr = stack.pop();
-        String id = stack.pop();
-
-        if (!arr.equals("")) {
-            String type = secondid + " Array";
-            Variable v = new Variable(id, type);
-            symbolTable.addVar(v);
-        } else {
-            Variable v = new Variable(id, secondid);
-            symbolTable.addVar(v);
-        }
+        String id = stack.pop();      
 
         temp = id + arr + assignment + newstmt + secondid + lparen + rparen + semicolon;
-        //System.out.println("object decl methodstmtseq " + temp );
         stack.push(temp);
         temp = "";
+        
+        Classes c = symbolTable.getMyClass(myParent) ;
+        if(!arr.equals(""))
+        {
+            secondid = secondid + "_ARRAY" ;
+        }
+        
+        Variable v = new Variable(id, secondid);
+        c.addVar(v) ;
+        symbolTable.addClass(c) ;
     }
 
-    public void caseAAssignbooleanMethodstmtseq(AAssignbooleanMethodstmtseq node) {
+    public void caseAAssignbooleanMethodstmtseq(AAssignbooleanMethodstmtseq node) { //get id
+        Classes c = symbolTable.getMyClass(myParent) ;
+        
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -431,9 +477,13 @@ public class PrintTree extends DepthFirstAdapter {
         String id = stack.pop();
 
         temp = id + arr + assignment + semicolon;
-        //System.out.println("bool methodstmtseq " + temp );
         stack.push(temp);
         temp = "";
+        
+        if(!c.containsVar(id))
+        {
+            error.add("Error in " + myParent + ". The variable " + id + " has not been declared yet." ) ;
+        }
     }
 
     public void caseAOneormoreStmtseq(AOneormoreStmtseq node) {
@@ -444,7 +494,6 @@ public class PrintTree extends DepthFirstAdapter {
         String stmt = stack.pop();
 
         temp = stmt + seq;
-        //System.out.println("stmtseq " + temp );
         stack.push(temp);
         temp = "";
     }
@@ -455,6 +504,7 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAExprassignmentStmt(AExprassignmentStmt node) {
         String parent = myParent;
+        
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -467,54 +517,118 @@ public class PrintTree extends DepthFirstAdapter {
         String arr = stack.pop();
         String id = stack.pop();
 
-        String scopeId = id + "_" + parent;
-        if (!symbolTable.containsVar(scopeId)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " has not been declared yet. " +
-                    "A variable must be declared before it can be asigned a value.");
-            } else {
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("INT")) {
-                    if (expr.contains(".")) {
-                        error.add("The variable " + id + " is type INT and cannot store a real number.");
-                    }
-                } else if (type.equals("BOOLEAN")) {
-                    if (!expr.equals("TRUE") || !expr.equals("FALSE")) {
-                        error.add("The variable " + id + " is type BOOLEAN and can only store boolean values");
-                    }
-                } else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
-                    if (expr.charAt(0) == '"') {
-                        error.add("The variable " + id + " is type " + type + " and cannot store a string");
-                    }
-                }
-
-            }
-        }
-        //check if the type matches      
-        else {
-            Variable v = symbolTable.getVar(scopeId);
-            String type = v.getType();
-            if (type.equals("INT")) {
-                if (expr.contains(".")) {
-                    error.add("The variable " + id + " is type INT and cannot store a real number.");
-                }
-            } else if (type.equals("BOOLEAN")) {
-                if (!expr.equals("TRUE") || !expr.equals("FALSE")) {
-                    error.add("The variable " + id + " is type BOOLEAN and can only store boolean values");
-                }
-            } else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
-                if (expr.charAt(0) == '"') {
-                    error.add("The variable " + id + " is type " + type + " and cannot store a string");
-                }
-            }
-
-        }
-
         temp = id + arr + assignment + expr + semicolon;
-        //System.out.println("assignment stmt " + temp);
         stack.push(temp);
         temp = "";
+
+        Classes c ;
+        Method m ;
+        if(inClass)
+        {
+            if(symbolTable.containsClass(prevParent))
+            {
+                String methodName = scopeMethod(id) ;
+                if(!methodName.equals(""))
+                {
+                    
+                }
+            }
+        }
+        else if(inMethod)
+        {
+            
+        }
+        //error checking to compare the type against the expression being assigned
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id);
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL";
+        }
+        if(idScope != null)
+        {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+
+            if(type.equals("INT"))
+            {
+                if(expr.contains("."))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type INT and cannot store a real numbers.") ;
+                }
+                if(expr.contains("\""))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type INT and cannot store a string literal.");
+                }
+            }
+            else if(type.equals("BOOLEAN"))
+            {
+                if(!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type BOOLEAN and can only store boolean values.") ;
+                }
+            }
+            else if(type.equals("STRING"))
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                    + "The variable " + id + " is type STRING and can only store string literals.");
+            }
+            else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
+                if (expr.charAt(0) == '"') {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type " + type + " and cannot store a string");
+                }
+            }
+            else if(type.contains("ARRAY"))
+            {
+                if(arr.equals(""))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is an array. Please specify the array index.") ;
+                }
+                if(type.equals("INT_ARRAY"))
+                {
+                    if(expr.contains("."))
+                    {
+                        error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                                + "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a real numbers.") ;
+                    }
+                    if(expr.contains("\""))
+                    {
+                        error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                                + "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a string literal.");
+                    }
+                }
+                else if(type.equals("BOOLEAN_ARRAY"))
+                {
+                    if(!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1"))
+                    {
+                        error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                                + "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAYand can only store boolean values.") ;
+                    }
+                }
+                else if(type.equals("STRING_ARRAY"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                        + "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and can only store string literals.");
+                }
+                else if (type.equals("INT_ARRAY") || type.equals("DOUBLE_ARRAY") || type.equals("BOOLEAN_BOOLEAN")) {
+                    if (expr.charAt(0) == '"') {
+                        error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                                + "The variable " + id + " is a " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a string");
+                    }
+                }
+
+            }
+        }
+        else {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                + "The variable " + id + " is undeclared. A variable must be declared before it can be assigned a value.");
+        }
     }
 
     public void caseAExpranycharStmt(AExpranycharStmt node) {
@@ -531,35 +645,63 @@ public class PrintTree extends DepthFirstAdapter {
         String arr = stack.pop();
         String id = stack.pop();
 
-        String scopeId = id + "_" + parent;
-        //check if variable has been declared
-        if (!symbolTable.containsVar(scopeId)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " has not been declared yet. " +
-                    "A variable must be declared before it can be asigned a value.");
-            } else {
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (!type.equals("STRING")) {
-                    error.add("The variable " + id + " is type " + type.toUpperCase() + " and cannot store string literals.");
-                }
-            }
-        } else { //check if the type of the var is a string
-            Variable v = symbolTable.getVar(scopeId);
-            String type = v.getType();
-            if (!type.equals("STRING")) {
-                error.add("The variable " + id + " is type " + type + " and cannot store string literals.");
-            }
-        }
-
-
         temp = id + arr + assignment + anychars + semicolon;
         stack.push(temp);
         temp = "";
+
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id);
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL" ;
+        }
+        if(idScope != null){
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+            if(arr.equals(""))
+            {
+                if (!type.equals("STRING")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type " + type.toUpperCase() + " and cannot store a string literal.");
+                }
+            }
+            else
+            {
+                if (!type.equals("STRING_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is not an array.");
+                }
+            }
+        }
+        else if(inClass)
+        {
+            Classes c = symbolTable.getMyClass(id) ;
+            v = c.getVar(id) ;
+            type = v.getType() ;
+            if(arr.equals(""))
+            {
+                if (!type.equals("STRING")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type " + type.toUpperCase() + " and cannot store a string literal.");
+                }
+            }
+            else
+            {
+                if (!type.equals("STRING_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is not an array.");
+                }
+            }
+        }
+        else {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is undeclared. A variable must be declared before it can be assigned a value.") ;
+        }
     }
 
     public void caseAIdlistStmt(AIdlistStmt node) {
-        String idParent = myParent;
+        String parent = myParent;
 
         node.getId().apply(this);
         node.getOptlidlist().apply(this);
@@ -575,66 +717,52 @@ public class PrintTree extends DepthFirstAdapter {
         String idlist = stack.pop();
         String id = stack.pop();
 
+        temp = id + idlist + colon + type + arr + semicolon;
+        stack.push(temp);
+        temp = "";
 
-        String idScope = id + "_" + idParent;
-        if(!idParent.equals("")){
-            if(arr.equals("")){
-                if (symbolTable.containsVar(idScope)) {
-                    error.add("The variable " + id + " has already been declared in " + idParent + ".");
-                } else {
-                    Variable v = new Variable(idScope, type);
-                    symbolTable.addVar(v);
-                }
-            }
-            else {
-                String arrType = type + "_ARRAY";
-                String num = arr.replace("[", "");
-                num = num.replace("]", "");                
-                Variable v = new Variable(idScope, arrType);
-                v.setValue(num.trim());
+        //error checking for scope and var re-declaration
+        Variable v ;
+        String idScope = id + "_" + parent ;        
+        if(symbolTable.containsVar(idScope))
+        {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " has already been declared in " + parent.replaceAll("\\d",""));
+        }
+        else
+        {
+            if(!parent.equals("")){
+                v = new Variable(idScope, type);
                 symbolTable.addVar(v);
             }
         }
-        else {
-            if(arr.equals("")){
-                if (symbolTable.containsVar(id)) {
-                    error.add("The variable " + id + " has already been declared in " + idParent + ".");
-                } else {
-                    Variable v = new Variable(id, type);
-                    symbolTable.addVar(v);
-                }
-            }
-            else {
-                String arrType = type + "_ARRAY";
-                Variable v = new Variable(id, arrType);
-                symbolTable.addVar(v);
-            }
-        }
-
 
         if (!idlist.equals("")) {
             String[] ids = idlist.split(",");
             for (int i = 0; i < ids.length; i++) {
-                if (symbolTable.containsVar(id)) {
-                    error.add("The variable " + id + " has already been declared.");
-                } else {
-                    Variable
-                    var = new Variable(ids[i], type);
-                    symbolTable.addVar(var);
+                idScope = ids[i] + "_" + parent ;
+                if(symbolTable.containsVar(idScope))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " has already been declared in " + parent.replaceAll("\\d",""));
                 }
+                else
+                {
+                    if(!parent.equals("")){
+                        v = new Variable(idScope, type);
+                        symbolTable.addVar(v);
+                    }
+                }
+
             }
         }
-
-        temp = id + idlist + colon + type + arr + semicolon;
-        //System.out.println("IdlistStmt " + temp);
-        stack.push(temp);
-        temp = "";
     }
 
     public void caseAIfbooleanStmt(AIfbooleanStmt node) {
         String tempPrevParent = prevParent;
         prevParent = myParent;
         myParent = "IF" + ifCount;
+        parentArr.add(0, myParent);
         node.getIf().apply(this);
         node.getLparen().apply(this);
         node.getBoolid().apply(this);
@@ -650,20 +778,20 @@ public class PrintTree extends DepthFirstAdapter {
         String ifstmt = stack.pop();
 
         temp = ifstmt + lparen + boolid + rparen + then + elsestmt;
-        //System.out.println("Ifstmt " + temp);
         stack.push(temp);
         temp = "";
 
         //reset the scope
         myParent = prevParent;
         prevParent = tempPrevParent;
-		ifCount++;
+        ifCount++;
     }
 
     public void caseAWhileStmt(AWhileStmt node) {
         String tempPrevParent = prevParent;
         prevParent = myParent;
         myParent = "WHILE" + whileCount;
+        parentArr.add(0, myParent);
         node.getWhile().apply(this);
         node.getLparen().apply(this);
         node.getBoolean().apply(this);
@@ -681,20 +809,20 @@ public class PrintTree extends DepthFirstAdapter {
         String whilesmt = stack.pop();
 
         temp = whilesmt + lparen + bool + rparen + lcurly + stmtseq + rcurly;
-        //System.out.println("while stmts" + temp);
         stack.push(temp);
         temp = "";
 
         //reset the scope
         myParent = prevParent;
         prevParent = tempPrevParent;
-		whileCount++;
+        whileCount++;
     }
 
     public void caseAForStmt(AForStmt node) {
         String tempPrevParent = prevParent;
         prevParent = myParent;
         myParent = "FOR" + forCount;
+        parentArr.add(0, myParent);
         node.getFor().apply(this);
         node.getLparen().apply(this);
         node.getOptionaltype().apply(this);
@@ -702,23 +830,52 @@ public class PrintTree extends DepthFirstAdapter {
         node.getId().apply(this);
         String peekId = stack.peek();
 
-        if (!peekType.equals("")) { //if the type is declared, add it to the symbolTable with its scope
-            String scopeId = peekId + "_FOR" + forCount;
-            if (!symbolTable.containsVar(scopeId)) {
+        //add the iterator declaration if there is one
+        String scopeId = peekId + "_" + myParent ;
+        if(!peekType.equals(""))
+        {
+            if(symbolTable.containsVar(scopeId))
+            {
+                error.add("Error in FOR. The variable " + peekId + " has already been declared.");
+            }
+            else {
                 Variable v = new Variable(scopeId, peekType);
                 symbolTable.addVar(v);
-
-            } else {
-                error.add("The variable " + peekId + " has already been declared.");
             }
-        } else {
-            if (!symbolTable.containsVar(peekId)) {
-                error.add("The variable " + peekId + " has not been declared.");
+        }
+        else {
+            if(!symbolTable.containsVar(peekId))
+            {
+                error.add("Error in FOR. The variable " + peekId + " is not declared and cannot be assigned a value.");
             }
         }
 
         node.getAssignment().apply(this);
         node.getExpr().apply(this);
+        String peekExp = stack.peek() ;
+        if(peekType.equals("INT"))
+        {
+            if(peekExp.contains("."))
+            {
+                error.add("Error in FOR. The variable " + peekId + " is type INT and cannot store a real number.");
+            }
+            else if(peekExp.contains("\""))
+            {
+                error.add("Error in FOR. The variable " + peekId + " is type INT and cannot store a string literal.");
+            }
+        }
+        else if(peekType.equals("BOOLEAN"))
+        {
+            if (!peekExp.equals("TRUE") || !peekExp.equals("FALSE") || !peekExp.equals("0") || !peekExp.equals("1")) {
+                error.add("Error in FOR. The variable " + peekId + " is type BOOLEAN and can only store boolean values");
+            }
+        }
+        else if (peekType.equals("INT") || peekType.equals("DOUBLE") || peekType.equals("BOOLEAN")) {
+            if (peekExp.charAt(0) == '"') {
+                error.add("The variable " + peekId + " is type " + peekType + " and cannot store a string");
+            }
+        }
+
         node.getFirstsemicolon().apply(this);
         node.getBoolean().apply(this);
         node.getSecondsemicolon().apply(this);
@@ -743,42 +900,6 @@ public class PrintTree extends DepthFirstAdapter {
         String lparen = stack.pop();
         String forStmt = stack.pop();
 
-
-        if (optionaltype.equals("")) { //if type is not declared must be in symbol table already
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " must be declared before it can be assigned a value.");
-            } else { //if it is in symbol table the expr assignment must match the type
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("INT")) {
-                    if (expr.contains(".")) {
-                        error.add("The variable " + id + " is type INT and cannot store a real number.");
-                    }
-                } else if (type.equals("BOOLEAN")) {
-                    if (!expr.equals("TRUE") || !expr.equals("FALSE")) {
-                        error.add("The variable " + id + " is type BOOLEAN and can only store boolean values");
-                    }
-                } else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
-                    if (expr.charAt(0) == '"') {
-                        error.add("The variable " + id + " is type " + type + " and cannot store a string");
-                    }
-                }
-
-            }
-        } else if (optionaltype.equals("INT")) {
-            if (expr.contains(".")) {
-                error.add("The variable " + id + " is type INT and cannot store a real number.");
-            } else if (optionaltype.equals("INT") || optionaltype.equals("DOUBLE") || optionaltype.equals("BOOLEAN")) {
-                if (expr.charAt(0) == '"') {
-                    error.add("The variable " + id + " is type " + optionaltype + " and cannot store a string");
-                }
-            } else if (optionaltype.equals("BOOLEAN")) {
-                if (!expr.equals("TRUE") || !expr.equals("FALSE")) {
-                    error.add("The variable " + id + " is type BOOLEAN and can only store boolean values");
-                }
-            }
-        }
-
         temp = forStmt + lparen + optionaltype + id + assignment + expr + firstsemi + bool + secondsemi + orstmts + rparen + lcurly + stmtseq + rcurly;
         stack.push(temp);
         temp = "";
@@ -786,10 +907,11 @@ public class PrintTree extends DepthFirstAdapter {
         //reset the scope
         myParent = prevParent;
         prevParent = tempPrevParent;
-		forCount++;
+        forCount++;
     }
 
     public void caseAGetStmt(AGetStmt node) {
+        String parent = myParent ;
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -809,9 +931,35 @@ public class PrintTree extends DepthFirstAdapter {
         temp = id + arr + assignment + get + lparen + rparen + semicolon;
         stack.push(temp);
         temp = "";
+
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id);
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL";
+        }
+        if(idScope == null)
+        {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " has not been declared.");
+        }
+        else {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+            if(type.contains("ARRAY"))
+            {
+                if(arr.equals(""))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is an array. Please specify the index.") ;
+                }
+            }
+        }
     }
 
     public void caseAPutStmt(APutStmt node) {
+        String parent = myParent ;
         node.getPut().apply(this);
         node.getLparen().apply(this);
         node.getId().apply(this);
@@ -829,6 +977,32 @@ public class PrintTree extends DepthFirstAdapter {
         temp = put + lparen + id + arr + rparen + semicolon;
         stack.push(temp);
         temp = "";
+
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id);
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL" ;
+        }
+        if(idScope == null)
+        {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " has not been declared.") ;
+        }
+        else {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+            if(type.contains("ARRAY"))
+            {
+                if(arr.equals(""))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is an array. Please specify the index.") ;
+                }
+            }
+        }
+
     }
 
     public void caseAIncrementStmt(AIncrementStmt node) {
@@ -843,33 +1017,49 @@ public class PrintTree extends DepthFirstAdapter {
         String arr = stack.pop();
         String id = stack.pop();
 
-        String scopeId = id + "_" + parent;
-
-        if (!symbolTable.containsVar(scopeId)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " has not been declared and cannot be incremented.");
-            } else {
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("STRING")) {
-                    error.add("The variable " + id + " is type STRING and cannot be incremented.");
-                } else if (type.equals("BOOLEAN")) {
-                    error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
-                }
-            }
-        } else {
-            Variable v = symbolTable.getVar(scopeId);
-            String type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("The variable " + id + " is type STRING and cannot be incremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
-            }
-        }
-
         temp = id + arr + increment + semicolon;
         stack.push(temp);
         temp = "";
+
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id);
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL" ;
+        }
+        if(idScope != null)
+        {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+            if (type.equals("STRING")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type STRING and cannot be incremented.");
+            } else if (type.equals("BOOLEAN")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type BOOLEAN and cannot be incremented.");
+            }
+            else if(type.contains("ARRAY"))
+            {
+                if(arr.equals(""))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is an array. Please specify the index.");
+                }
+                else if (type.equals("STRING_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is a STRING ARRAY and cannot be incremented.");
+                } else if (type.equals("BOOLEAN_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is a BOOLEAN ARRAY and cannot be incremented.");
+                }
+            }
+        }
+        else {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " has not been declared and cannot be incremented.");
+        }
+
     }
 
     public void caseADecrementStmt(ADecrementStmt node) {
@@ -884,33 +1074,50 @@ public class PrintTree extends DepthFirstAdapter {
         String arr = stack.pop();
         String id = stack.pop();
 
-        String scopeId = id + "_" + parent;
-
-        if (!symbolTable.containsVar(scopeId)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " has not been declared and cannot be decremented.");
-            } else {
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("STRING")) {
-                    error.add("The variable " + id + " is type STRING and cannot be decremented.");
-                } else if (type.equals("BOOLEAN")) {
-                    error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
-                }
-            }
-        } else {
-            Variable v = symbolTable.getVar(scopeId);
-            String type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("The variable " + id + " is type STRING and cannot be decremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
-            }
-        }
-
         temp = id + arr + decrement + semicolon;
         stack.push(temp);
         temp = "";
+
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id);
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL" ;
+        }
+        if(idScope != null)
+        {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+            if (type.equals("STRING")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type STRING and cannot be decremented.");
+            } else if (type.equals("BOOLEAN")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type BOOLEAN and cannot be decremented.");
+            }
+            else if(type.contains("ARRAY"))
+            {
+                if(arr.equals(""))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is an array. Please specify the index.");
+                }
+                else if (type.equals("STRING_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is a STRING ARRAY and cannot be decremented.");
+                } else if (type.equals("BOOLEAN_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is a BOOLEAN ARRAY and cannot be decremented.");
+                }
+            }
+        }
+        else
+        {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " has not been declared and cannot be decremented.");
+        }
+
 
     }
 
@@ -930,19 +1137,10 @@ public class PrintTree extends DepthFirstAdapter {
         String secondid = stack.pop();
         String newkeyword = stack.pop();
         String assignment = stack.pop();
-        String optionalid = stack.pop();
+        String arr = stack.pop();
         String id = stack.pop();
 
-        if (!optionalid.equals("")) {
-            String type = secondid + " Array";
-            Variable v = new Variable(id, type);
-            symbolTable.addVar(v);
-        } else {
-            Variable v = new Variable(id, secondid);
-            symbolTable.addVar(v);
-        }
-
-        temp = id + optionalid + assignment + newkeyword + secondid + lparen + rparen + semicolon;
+        temp = id + arr + assignment + newkeyword + secondid + lparen + rparen + semicolon;
         stack.push(temp);
         temp = "";
     }
@@ -1007,7 +1205,6 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAIdbooleanStmt(AIdbooleanStmt node) {
         String parent = myParent;
-
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -1020,36 +1217,56 @@ public class PrintTree extends DepthFirstAdapter {
         String arr = stack.pop();
         String id = stack.pop();
 
-        String idScope = id + "_" + parent;
-
-        if (!symbolTable.containsVar(idScope)) { //check if there is a variable with this scope
-            if (!symbolTable.containsVar(id)) { //check if the symbol table contains the var
-                error.add("The variable " + id + " has not been declared and cannot be assigned a value.");
-            } else { //booleans can only be stored into INT, REAL or BOOLEAN 
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("STRING")) {
-                    error.add("The variable " + id + " is type STRING and cannot store a boolean value.");
-                }
-            }
-        } else {
-            Variable v = symbolTable.getVar(idScope);
-            String type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("The variable " + id + " is type STRING and cannot store a boolean value.");
-            }
-        }
-
-
         temp = id + arr + bool + semicolon;
         stack.push(temp);
         temp = "";
+
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id);
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL" ;
+        }
+        if(idScope != null)
+        {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+            if (type.equals("STRING")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type STRING and cannot be incremented.");
+            } else if (type.equals("BOOLEAN")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type BOOLEAN and cannot be incremented.");
+            }
+            else if(type.contains("ARRAY"))
+            {
+                if(arr.equals(""))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is an array. Please specify the index.");
+                }
+                else if (type.equals("STRING_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is a STRING ARRAY and cannot be incremented.");
+                } else if (type.equals("BOOLEAN_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is a BOOLEAN ARRAY and cannot be incremented.");
+                }
+            }
+        }
+        else {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " has not been declared and cannot be incremented.");
+        }
+
     }
 
     public void caseASwitchStmt(ASwitchStmt node) {
         String tempPrevParent = prevParent;
         prevParent = myParent;
         myParent = "SWITCH" + switchCount;
+        parentArr.add(0, myParent);
         node.getSwitch().apply(this);
         node.getFirstlparen().apply(this);
         node.getExpr().apply(this);
@@ -1093,7 +1310,7 @@ public class PrintTree extends DepthFirstAdapter {
         //reset the scope
         myParent = prevParent;
         prevParent = tempPrevParent;
-		switchCount++;
+        switchCount++;
     }
 
     public void caseACommaidlistOptlidlist(ACommaidlistOptlidlist node) {
@@ -1106,7 +1323,6 @@ public class PrintTree extends DepthFirstAdapter {
         String comma = stack.pop();
 
         temp = comma + id + optlid;
-        //System.out.println("Optlidlist " + temp);
         stack.push(temp);
         temp = "";
     }
@@ -1132,7 +1348,8 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseAElseOptionalelse(AElseOptionalelse node) {
         String tempPrevParent = prevParent;
         prevParent = myParent;
-        myParent = "ELSE" + elseCount;
+        myParent = "ELSE" + ifCount;
+        parentArr.add(0, myParent);
         node.getFirstlcurly().apply(this);
         node.getFirststmtseq().apply(this);
         node.getFirstrcurly().apply(this);
@@ -1156,7 +1373,6 @@ public class PrintTree extends DepthFirstAdapter {
         //reset the scope
         myParent = prevParent;
         prevParent = tempPrevParent;
-		elseCount++ ;
     }
 
     public void caseACaselistOptionalswitchcases(ACaselistOptionalswitchcases node) {
@@ -1211,32 +1427,33 @@ public class PrintTree extends DepthFirstAdapter {
         String incr = stack.pop();
         String id = stack.pop();
 
-        String idScope = id + "_" + parent;
-        if (!symbolTable.containsVar(idScope)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " has not been declared and cannot be incremented.");
-            } else {
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("STRING")) {
-                    error.add("The variable " + id + " is type STRING and cannot be incremented.");
-                } else if (type.equals("BOOLEAN")) {
-                    error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
-                }
-            }
-        } else {
-            Variable v = symbolTable.getVar(idScope);
-            String type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("The variable " + id + " is type STRING and cannot be incremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("The variable " + id + " is type BOOLEAN and cannot be incremented.");
-            }
-        }
-
         temp = id + incr;
         stack.push(temp);
         temp = "";
+
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id) ;
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL" ;
+        }
+        if(idScope != null)
+        {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+            if (type.equals("STRING")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type STRING and cannot be incremented.");
+            } else if (type.equals("BOOLEAN")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type BOOLEAN and cannot be incremented.");
+            }
+        }
+        else {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " has not been declared and cannot be incremented.");
+        }
     }
 
     public void caseADecrementOrstmts(ADecrementOrstmts node) {
@@ -1248,33 +1465,33 @@ public class PrintTree extends DepthFirstAdapter {
         String decr = stack.pop();
         String id = stack.pop();
 
-        String idScope = id + "_" + parent;
-        if (!symbolTable.containsVar(idScope)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " has not been declared and cannot be decremented.");
-            } else {
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("STRING")) {
-                    error.add("The variable " + id + " is type STRING and cannot be decremented.");
-                } else if (type.equals("BOOLEAN")) {
-                    error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
-                }
-            }
-        } else {
-            Variable v = symbolTable.getVar(idScope);
-            String type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("The variable " + id + " is type STRING and cannot be decremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("The variable " + id + " is type BOOLEAN and cannot be decremented.");
-            }
-        }
-
         temp = id + decr;
         stack.push(temp);
         temp = "";
 
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id) ;
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL" ;
+        }
+        if(idScope != null)
+        {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+            if (type.equals("STRING")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type STRING and cannot be decremented.");
+            } else if (type.equals("BOOLEAN")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type BOOLEAN and cannot be decremented.");
+            }
+        }
+        else {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " has not been declared and cannot be decremented.");
+        }
     }
 
     public void caseAAssignmentOrstmts(AAssignmentOrstmts node) {
@@ -1287,49 +1504,59 @@ public class PrintTree extends DepthFirstAdapter {
         String assignment = stack.pop();
         String id = stack.pop();
 
-        String idScope = id + "_" + parent;
-        if (!symbolTable.containsVar(idScope)) {
-            if (!symbolTable.containsVar(id)) {
-                error.add("The variable " + id + " must be declared before it can be assigned a value.");
-            } else { //if it is in symbol table the expr assignment must match the type
-                Variable v = symbolTable.getVar(id);
-                String type = v.getType();
-                if (type.equals("INT")) {
-                    if (expr.contains(".")) {
-                        error.add("The variable " + id + " is type INT and cannot store a real number.");
-                    }
-                } else if (type.equals("BOOLEAN")) {
-                    if (!expr.equals("TRUE") || !expr.equals("FALSE")) {
-                        error.add("The variable " + id + " is type BOOLEAN and can only store boolean values");
-                    }
-                } else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
-                    if (expr.charAt(0) == '"') {
-                        error.add("The variable " + id + " is type " + type + " and cannot store a string");
-                    }
-                }
-
-            }
-        } else {
-            Variable v = symbolTable.getVar(idScope);
-            String type = v.getType();
-            if (type.equals("INT")) {
-                if (expr.contains(".")) {
-                    error.add("The variable " + id + " is type INT and cannot store a real number.");
-                }
-            } else if (type.equals("BOOLEAN")) {
-                if (!expr.equals("TRUE") || !expr.equals("FALSE")) {
-                    error.add("The variable " + id + " is type BOOLEAN and can only store boolean values");
-                }
-            } else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
-                if (expr.charAt(0) == '"') {
-                    error.add("The variable " + id + " is type " + type + " and cannot store a string");
-                }
-            }
-        }
-
         temp = id + assignment + expr;
         stack.push(temp);
         temp = "";
+
+        Variable v ;
+        String type ;
+        String idScope = getVarId(parent, id);
+        if(parent.equals(""))
+        {
+            parent = "GLOBAL" ;
+        }
+        if(idScope != null)
+        {
+            v = symbolTable.getVar(idScope);
+            type = v.getType();
+
+            if(type.equals("INT"))
+            {
+                if(expr.contains("."))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type INT and cannot store a real numbers.") ;
+                }
+                if(expr.contains("\""))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type INT and cannot store a string literal.");
+                }
+            }
+            else if(type.equals("BOOLEAN"))
+            {
+                if(!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type BOOLEAN and can only store boolean values.") ;
+                }
+            }
+            else if(type.equals("STRING"))
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                    + "The variable " + id + " is type STRING and can only store string literals.");
+            }
+            else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
+                if (expr.charAt(0) == '"') {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                            + "The variable " + id + " is type " + type + " and cannot store a string");
+                }
+            }
+        }
+        else {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". "
+                + "The variable " + id + " is undeclared. A variable must be declared before it can be assigned a value.");
+        }
     }
 
     public void caseANonemptyOptlidvarlisttwo(ANonemptyOptlidvarlisttwo node) {
@@ -1456,71 +1683,77 @@ public class PrintTree extends DepthFirstAdapter {
         String addop = stack.pop();
         String expr = stack.pop();
 
-        //error checking processing
-        Variable t;
-        Variable e;
-        String termType = "";
-        String exprType = "";
-
-        if (termIsId) {
-            String termIdScope = term + "_" + parent;
-            if (!symbolTable.containsVar(termIdScope)) { //if the term is an id check its type and declaration
-                if (!symbolTable.containsVar(term)) {
-                    error.add("The variable " + term + " is undeclared. " +
-                        "Cannot add an undeclared variable.");
-                } else {
-                    t = symbolTable.getVar(term);
-                    termType = t.getType();
-
-                    if (termType.equals("STRING")) {
-                        error.add("The variable " + term + " is type STRING. " +
-                            "Cannot do arithmetic addition with a string literatl.");
-                    }
-                }
-            } else {
-                t = symbolTable.getVar(termIdScope);
-                termType = t.getType();
-
-                if (termType.equals("STRING")) {
-                    error.add("The variable " + term + " is type STRING. " +
-                        "Cannot do arithmetic addition with a string literatl.");
-                }
-            }
-        } else if (term.contains("\"")) {
-            error.add(term + " is a STRING. Cannot add a string literal.");
-        }
-
-        if (exprIsId) { //if the expr is an id check its type and declaration
-            String exprIdScope = expr + "_" + parent;
-            if (!symbolTable.containsVar(exprIdScope)) {
-                if (!symbolTable.containsVar(expr)) {
-                    error.add("The variable " + expr + " is undeclared. " +
-                        "Cannot add an undeclared variable.");
-                } else {
-                    e = symbolTable.getVar(expr);
-                    exprType = e.getType();
-
-                    if (exprType.equals("STRING")) {
-                        error.add("The variable " + expr + " is type STRING. " +
-                            "Cannot do arithmetic addition with a string literatl.");
-                    }
-                }
-            } else {
-                e = symbolTable.getVar(exprIdScope);
-                exprType = e.getType();
-
-                if (exprType.equals("STRING")) {
-                    error.add("The variable " + expr + " is type STRING. " +
-                        "Cannot do arithmetic addition with a string literatl.");
-                }
-            }
-        } else if (expr.contains("\"")) {
-            error.add(expr + " is a STRING. Cannot add a string literal.");
-        }
-
         temp = expr + addop + term;
         stack.push(temp);
         temp = "";
+
+        Variable t ;
+        Variable e ;
+        String tType ;
+        String eType ;
+
+        if(termIsId)
+        {
+            if(term.contains("["))
+            {
+                term = term.replaceAll("[", "") ;
+                term = term.replaceAll("]", "") ;
+            }
+
+            String tIdScope = getVarId(parent, term) ;
+            if(parent.equals("")){
+                parent = "GLOBAL" ;
+            }
+            if(tIdScope != null)
+            {
+                t = symbolTable.getVar(tIdScope) ;
+                tType = t.getType() ;
+                if(tType.equals("STRING") || tType.equals("STRING_ARRAY"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + term + " is type STRING. Cannot complete arithmetic"
+                                + " addition with a string.") ;
+                }
+            }
+            else {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + term + " has not been declared."
+                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            }
+        }
+
+        if(exprIsId)
+        {
+            if(expr.contains("["))
+            {
+                expr = expr.replaceAll("[", "") ;
+                expr = expr.replaceAll("]", "") ;
+            }
+
+            String eIdScope = getVarId(parent, expr) ;
+            if(parent.equals(""))
+            {
+                parent = "GLOBAL" ;
+            }
+
+            if(eIdScope != null)
+            {
+                e = symbolTable.getVar(eIdScope) ;
+                eType = e.getType() ;
+                if(eType.equals("STRING") || eType.equals("STRING_ARRAY"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + expr + " is type STRING. Cannot complete arithmetic"
+                                    + " addition with a string.") ;
+                }
+            }
+            else
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + expr + " has not been declared."
+                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            }
+        }
     }
 
     public void caseASingleExpr(ASingleExpr node) {
@@ -1542,73 +1775,77 @@ public class PrintTree extends DepthFirstAdapter {
         String mult = stack.pop();
         String term = stack.pop();
 
-        Variable t;
-        Variable f;
-        String termType = "";
-        String factorType = "";
-
-        //if term is an id check its type
-        if (termIsId) {
-            String tIdScope = term + "_" + parent;
-            if (!symbolTable.containsVar(tIdScope)) { //if the term is an id check its type and declaration
-                if (!symbolTable.containsVar(term)) {
-                    error.add("The variable " + term + " is undeclared. " +
-                        "Cannot add an undeclared variable.");
-                } else {
-                    t = symbolTable.getVar(term);
-                    termType = t.getType();
-
-                    if (termType.equals("STRING")) {
-                        error.add("The variable " + term + " is type STRING. " +
-                            "Cannot do arithmetic addition with a string literatl.");
-                    }
-                }
-            } else {
-                t = symbolTable.getVar(tIdScope);
-                termType = t.getType();
-
-                if (termType.equals("STRING")) {
-                    error.add("The variable " + term + " is type STRING. " +
-                        "Cannot do arithmetic addition with a string literatl.");
-                }
-            }
-        } else if (term.contains("\"")) {
-            error.add(term + " is a STRING. Cannot add a string literal.");
-        }
-
-
-        //if factor is an id check its type
-        if (factorIsId) {
-            String fIdScope = factor + "_" + parent;
-            if (!symbolTable.containsVar(fIdScope)) { //if the term is an id check its type and declaration
-                if (!symbolTable.containsVar(factor)) {
-                    error.add("The variable " + factor + " is undeclared. " +
-                        "Cannot add an undeclared variable.");
-                } else {
-                    f = symbolTable.getVar(factor);
-                    factorType = f.getType();
-
-                    if (factorType.equals("STRING")) {
-                        error.add("The variable " + factor + " is type STRING. " +
-                            "Cannot do arithmetic addition with a string literatl.");
-                    }
-                }
-            } else {
-                f = symbolTable.getVar(fIdScope);
-                factorType = f.getType();
-
-                if (factorType.equals("STRING")) {
-                    error.add("The variable " + factor + " is type STRING. " +
-                        "Cannot do arithmetic addition with a string literatl.");
-                }
-            }
-        } else if (factor.contains("\"")) {
-            error.add(factor + " is a STRING. Cannot add a string literal.");
-        }
-
         temp = term + mult + factor;
         stack.push(temp);
         temp = "";
+
+        Variable t ;
+        Variable f ;
+        String tType ;
+        String fType ;
+
+        if(termIsId)
+        {
+            if(term.contains("["))
+            {
+                term = term.replaceAll("[", "") ;
+                term = term.replaceAll("]", "") ;
+            }
+
+            String tIdScope = getVarId(parent, term) ;
+            if(parent.equals(""))
+            {
+                parent = "GLOBAL" ;
+            }
+            if(tIdScope != null)
+            {
+                t = symbolTable.getVar(tIdScope) ;
+                tType = t.getType() ;
+                if(tType.equals("STRING") || tType.equals("STRING_ARRAY"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + term + " is type STRING. Cannot complete arithmetic"
+                                + " addition with a string.") ;
+                }
+            }
+            else {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + term + " has not been declared."
+                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            }
+        }
+
+        if(factorIsId)
+        {
+            if(factor.contains("["))
+            {
+                factor = factor.replaceAll("[", "") ;
+                factor = factor.replaceAll("]", "") ;
+            }
+
+            String fIdScope = getVarId(parent, factor) ;
+            if(parent.equals(""))
+            {
+                parent = "GLOBAL" ;
+            }
+            if(fIdScope != null)
+            {
+                f = symbolTable.getVar(fIdScope) ;
+                fType = f.getType() ;
+                if(fType.equals("STRING") || fType.equals("STRING_ARRAY"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + factor + " is type STRING. Cannot complete arithmetic"
+                                + " addition with a string.") ;
+                }
+            }
+            else
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + factor + " has not been declared."
+                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            }
+        }
     }
 
     public void caseAFactorTerm(AFactorTerm node) {
@@ -1620,7 +1857,7 @@ public class PrintTree extends DepthFirstAdapter {
         String parent = myParent;
         node.getLparen().apply(this);
         node.getExpr().apply(this);
-        boolean expIsId = isId;
+        boolean exprIsId = isId;
         isId = false;
         node.getRparen().apply(this);
 
@@ -1628,20 +1865,32 @@ public class PrintTree extends DepthFirstAdapter {
         String expr = stack.pop();
         String lparen = stack.pop();
 
-        //error check
-        if (expIsId) {
-            String idScope = expr + "_" + parent;
-            if (!symbolTable.containsVar(idScope)) {
-                if (!symbolTable.containsVar(expr)) {
-                    error.add("The variable " + expr + " is undeclared." +
-                        " A variable must be declared before using it in a statement.");
-                }
-            }
-        }
-
         temp = lparen + expr + rparen;
         stack.push(temp);
         temp = "";
+
+        Variable e ;
+        if(exprIsId)
+        {
+            if(expr.contains("["))
+            {
+                expr = expr.replaceAll("[", "") ;
+                expr = expr.replaceAll("]", "") ;
+            }
+
+            String eIdScope = getVarId(parent, expr) ;
+            if(parent.equals(""))
+            {
+                parent = "GLOBAL" ;
+            }
+
+            if(eIdScope == null)
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + expr + " has not been declared."
+                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            }
+        }
     }
 
     public void caseAMinusfactorFactor(AMinusfactorFactor node) {
@@ -1649,37 +1898,48 @@ public class PrintTree extends DepthFirstAdapter {
 
         node.getMinus().apply(this);
         node.getFactor().apply(this);
-        boolean isFactorId = isId;
+        boolean factorIsId = isId;
         isId = false;
 
         String factor = stack.pop();
         String minus = stack.pop();
 
-        if (isFactorId) {
-            String idScope = factor + "_" + parent;
-            if (!symbolTable.containsVar(idScope)) {
-                if (!symbolTable.containsVar(factor)) {
-                    error.add("The variable " + factor + " is undeclared. " +
-                        "A variable must be declared before using it in a statement.");
-                } else {
-                    Variable v = symbolTable.getVar(factor);
-                    String type = v.getType();
-                    if (type.equals("STRING")) {
-                        error.add("The variable " + factor + " is type STRING. Cannot - a string literal.");
-                    }
-                }
-            } else {
-                Variable v = symbolTable.getVar(idScope);
-                String type = v.getType();
-                if (type.equals("STRING")) {
-                    error.add("The variable " + factor + " is type STRING. Cannot - a string literal.");
-                }
-            }
-        }
-
         temp = minus + factor;
         stack.push(temp);
         temp = "";
+
+        Variable f ;
+        String fType ;
+        if(factorIsId)
+        {
+            if(factor.contains("["))
+            {
+                factor = factor.replaceAll("[", "") ;
+                factor = factor.replaceAll("]", "") ;
+            }
+
+            String fIdScope = getVarId(parent, factor) ;
+            if(parent.equals(""))
+            {
+                parent = "GLOBAL" ;
+            }
+            if(fIdScope != null)
+            {
+                f = symbolTable.getVar(fIdScope) ;
+                fType = f.getType() ;
+                if(fType.equals("STRING") || fType.equals("STRING_ARRAY"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + factor + " is type STRING. Cannot negate a string.") ;
+                }
+            }
+            else
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + factor + " has not been declared."
+                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            }
+        }
     }
 
     public void caseAIntFactor(AIntFactor node) {
@@ -1747,6 +2007,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAIdArrayorid(AIdArrayorid node) {
+        isId = true ;
         node.getId().apply(this);
     }
 
@@ -1755,6 +2016,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAArrayOptionalidarray(AArrayOptionalidarray node) {
+        isId = true ;
         node.getLsquare().apply(this);
         node.getNumber().apply(this);
         node.getRsquare().apply(this);
@@ -1763,7 +2025,7 @@ public class PrintTree extends DepthFirstAdapter {
         String number = stack.pop();
         String lsquare = stack.pop();
 
-        temp = rsquare + number + lsquare;
+        temp = lsquare + number + rsquare;
         stack.push(temp);
         temp = "";
     }
@@ -1791,82 +2053,89 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseACondexpr(ACondexpr node) {
         String parent = myParent;
 
+
         node.getFirstexpr().apply(this);
-        boolean isFirstExprId = isId;
+        boolean firstExprIsId = isId;
         isId = false;
         node.getCond().apply(this);
         node.getSecondexpr().apply(this);
-        boolean isSecondExprId = isId;
+        boolean secondExprIsId = isId;
         isId = false;
 
         String secondexpr = stack.pop();
         String cond = stack.pop();
         String firstexpr = stack.pop();
+
+        temp = firstexpr + cond + secondexpr;
+        stack.push(temp);
+        temp = "";
+
         Variable firstExpVar;
         Variable secondExpVar;
         String firstExpType = "";
         String secondExpType = "";
 
-        if (isFirstExprId) { //if the expr is an id check its type and declaration
-            String firstExprIdScope = firstexpr + "_" + parent;
-            if (!symbolTable.containsVar(firstExprIdScope)) {
-                if (!symbolTable.containsVar(firstexpr)) {
-                    error.add("The variable " + firstexpr + " is undeclared. " +
-                        "Cannot add an undeclared variable.");
-                } else {
-                    firstExpVar = symbolTable.getVar(firstexpr);
-                    firstExpType = firstExpVar.getType();
+        if(firstExprIsId)
+        {
+            if(firstexpr.contains("["))
+            {
+                firstexpr = firstexpr.replaceAll("[", "") ;
+                firstexpr = firstexpr.replaceAll("]", "") ;
+            }
 
-                    if (firstexpr.equals("STRING")) {
-                        error.add("The variable " + firstexpr + " is type STRING. " +
-                            "Cannot do arithmetic addition with a string literatl.");
-                    }
-                }
-            } else {
-                firstExpVar = symbolTable.getVar(firstExprIdScope);
-                firstExpType = firstExpVar.getType();
-
-                if (firstExpType.equals("STRING")) {
-                    error.add("The variable " + firstexpr + " is type STRING. " +
-                        "Cannot do arithmetic addition with a string literatl.");
+            String firstExprIdScope = getVarId(parent, firstexpr) ;
+            if(parent.equals(""))
+            {
+                parent = "GLOBAL" ;
+            }
+            if(firstExprIdScope != null)
+            {
+                firstExpVar = symbolTable.getVar(firstExprIdScope) ;
+                firstExpType = firstExpVar.getType() ;
+                if(firstExpType.equals("STRING") || firstExpType.equals("STRING_ARRAY"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + firstexpr + " is type STRING. Cannot use a string in a conditional expression.") ;
                 }
             }
-        } else if (firstexpr.contains("\"")) {
-            error.add(firstexpr + " is a STRING. Cannot add a string literal.");
+            else
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + firstexpr + " has not been declared."
+                                + " Cannot use an undeclared variable in a conditional expression.") ;
+            }
         }
 
-        if (isSecondExprId) { //if the expr is an id check its type and declaration
-            String secondExprIdScope = secondexpr + "_" + parent;
-            if (!symbolTable.containsVar(secondExprIdScope)) {
-                if (!symbolTable.containsVar(secondexpr)) {
-                    error.add("The variable " + secondexpr + " is undeclared. " +
-                        "Cannot add an undeclared variable.");
-                } else {
-                    secondExpVar = symbolTable.getVar(secondexpr);
-                    secondExpType = secondExpVar.getType();
+        if(secondExprIsId)
+        {
+            if(secondexpr.contains("["))
+            {
+                secondexpr = secondexpr.replaceAll("[", "") ;
+                secondexpr = secondexpr.replaceAll("]", "") ;
+            }
 
-                    if (secondExpType.equals("STRING")) {
-                        error.add("The variable " + secondexpr + " is type STRING. " +
-                            "Cannot do arithmetic addition with a string literatl.");
-                    }
-                }
-            } else {
-                secondExpVar = symbolTable.getVar(secondExprIdScope);
-                secondExpType = secondExpVar.getType();
-
-                if (secondExpType.equals("STRING")) {
-                    error.add("The variable " + secondexpr + " is type STRING. " +
-                        "Cannot do arithmetic addition with a string literatl.");
+            String secondExprIdScope = getVarId(parent, secondexpr) ;
+            if(parent.equals(""))
+            {
+                parent = "GLOBAL" ;
+            }
+            if(secondExprIdScope != null)
+            {
+                secondExpVar = symbolTable.getVar(secondExprIdScope) ;
+                secondExpType = secondExpVar.getType() ;
+                if(secondExpType.equals("STRING") || secondExpType.equals("STRING_ARRAY"))
+                {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + secondexpr + " is type STRING. Cannot use a string in a conditional expression.") ;
                 }
             }
-        } else if (secondexpr.contains("\"")) {
-            error.add(secondexpr + " is a STRING. Cannot add a string literal.");
+            else
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + secondexpr + " has not been declared."
+                                + " Cannot use an undeclared variable in a conditional expression.") ;
+            }
         }
-
-
-        temp = firstexpr + cond + secondexpr;
-        stack.push(temp);
-        temp = "";
 
     }
 
@@ -2077,6 +2346,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseTId(TId node) {
+        isId = true ;
         stack.push(node.getText());
     }
 
@@ -2144,4 +2414,79 @@ public class PrintTree extends DepthFirstAdapter {
 
         stack.push(node.getText());
     }
+
+    public static String getVarId(String parent, String id){
+        String idScope ;
+        int pIndex = 0;
+
+        while(!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1){
+            pIndex++;
+        }
+
+        idScope = id + "_" + parentArr.get(pIndex);
+        while(!symbolTable.containsVar(idScope) && pIndex < parentArr.size() - 1){
+            pIndex++ ;
+            idScope = id + "_" + parentArr.get(pIndex);
+        }
+
+        if(pIndex >= parentArr.size())
+        {
+            if(!symbolTable.containsVar(id))
+            {
+                return null ;
+            }
+            else
+            {
+                Variable v = symbolTable.getVar(id);
+                return v.getName() ;
+            }
+        }
+        else
+        {
+            if(!symbolTable.containsVar(idScope))
+            {
+                if(!symbolTable.containsVar(id)){
+                    return null ;
+                }
+                else
+                {
+                    Variable v = symbolTable.getVar(id);
+                    return v.getName();
+                }
+            }
+            else {
+                Variable v = symbolTable.getVar(idScope);
+                return v.getName() ;
+            }
+        }
+    }
+    
+    public String scopeMethod(String varId)
+    {
+       
+        HashMap<String, Classes> classesMap = symbolTable.getAllClasses() ;
+        Set<String> keys = classesMap.keySet() ;
+        for(int i = 0; i < parentArr.size() ; i++)
+        {
+            String parentId = parentArr.get(i); 
+            
+            for(String k : keys)
+            {
+                Classes c = classesMap.get(k) ;
+                HashMap<String, Method> methodMap = c.getAllMethods() ;
+                
+                if(methodMap.containsKey(parentId))
+                {
+                    Method m = methodMap.get(parentArr.get(i)) ;
+                    if(m.containsVar(varId)){
+                        return parentArr.get(i);
+                    }
+                }
+                
+            }
+        }
+        
+        return "" ;
+    }
+    
 }
