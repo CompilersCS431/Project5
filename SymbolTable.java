@@ -79,4 +79,13 @@ public class SymbolTable {
         }
     }
 
+    public boolean containsClass(String cid)
+    {
+        return classTable.containsKey(cid) ;
+    }
+    
+    public HashMap getAllClasses()
+    {
+        return classTable ;
+    }
 }

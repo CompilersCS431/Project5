@@ -38,11 +38,6 @@ public class Classes {
         return id ;
     }
     
-    public HashMap getClassMethods()
-    {
-        return methodTable ;
-    }    
-    
     public HashMap getClassVars()
     {
         return varTable ;
@@ -80,5 +75,10 @@ public class Classes {
     public boolean containsMethod(String m)
     {
         return varTable.containsKey(m) ;
+    }
+    
+    public HashMap getAllMethods()
+    {
+        return methodTable ;
     }
 }

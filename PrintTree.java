@@ -11,7 +11,7 @@ public class PrintTree extends DepthFirstAdapter {
     public ArrayList < String > error;
     private boolean isId, inClass, inMethod;
     private String myParent;
-    private String prevParent;
+    private String prevParent, className, methodName;
     private int forCount ;
     private int whileCount ;
     private int switchCount ;
@@ -33,6 +33,8 @@ public class PrintTree extends DepthFirstAdapter {
         parentArr = new ArrayList<>() ;
         inClass = false ;
         inMethod = false ;
+        className = "" ;
+        methodName = "" ;
     }
 
     public void caseAProg(AProg node) {
@@ -52,14 +54,25 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAClassdeclClassmethodstmt(AClassdeclClassmethodstmt node) { //class declaration
         inClass = true ;
-        
         node.getTclass().apply(this);
         node.getId().apply(this);
         
         //add class to symbol table
         String peekId = stack.peek() ;
         Classes c = new Classes(peekId) ;
-        symbolTable.addClass(c) ;
+        className = peekId ;
+        
+        //error checking for declaring a class multiple times
+        if(symbolTable.containsClass(peekId))
+        {
+            error.add("The class " + peekId + " has already been declared.") ; 
+        }
+        else 
+        {
+            symbolTable.addClass(c) ;
+
+        }
+        
         String tempPrevParent = prevParent;
         prevParent = myParent;
         myParent = peekId ;
@@ -85,13 +98,26 @@ public class PrintTree extends DepthFirstAdapter {
         prevParent = tempPrevParent;
         
         inClass = false ;
+        className = "" ;
     }
 
     public void caseATypevarliststmtClassmethodstmt(ATypevarliststmtClassmethodstmt node) { //global method declaration
         inMethod = true ;
         
         node.getType().apply(this);
+        String peekType = stack.peek() ;
         node.getId().apply(this);
+        methodName = stack.peek() ;
+        Method m = new Method(methodName, peekType);
+        if(symbolTable.containsMethod(methodName))
+        {
+            error.add("The method " + methodName + " has already been declared in the global scope.") ;
+        }    
+        else
+        {
+            symbolTable.addMethod(m) ;
+        }
+        
         node.getLparen().apply(this);
         node.getVarlist().apply(this);
         node.getRparen().apply(this);
@@ -108,7 +134,7 @@ public class PrintTree extends DepthFirstAdapter {
         String id = stack.pop();
         String type = stack.pop();
 
-        Method m = new Method(id, type);
+        
 
         String paramId = "";
         String paramType = "";
@@ -134,6 +160,7 @@ public class PrintTree extends DepthFirstAdapter {
             //check for other return statements 
         }
 
+        //update the method in the method table with the parameters
         symbolTable.addMethod(m);
 
         temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly;
@@ -141,6 +168,7 @@ public class PrintTree extends DepthFirstAdapter {
         temp = "";
         
         inMethod = false; 
+        methodName = "" ;
     }
 
     public void caseAIdlisttypeClassmethodstmt(AIdlisttypeClassmethodstmt node) { //global var declarations
@@ -192,7 +220,7 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseATypevarlistMethodstmtseq(ATypevarlistMethodstmtseq node) { //method declaration in class
         inMethod = true ;
         //get the class
-        Classes c = symbolTable.getMyClass(myParent) ;
+        Classes c = symbolTable.getMyClass(className) ;
         
         String tempPrevParent = prevParent ;
         prevParent = myParent ;
@@ -202,6 +230,7 @@ public class PrintTree extends DepthFirstAdapter {
         
         String peekId = stack.peek() ;
         myParent = peekId ;
+        methodName = peekId ;
         
         node.getLparen().apply(this);
         node.getVarlist().apply(this);
@@ -233,9 +262,17 @@ public class PrintTree extends DepthFirstAdapter {
             }
         }
         
-        c.addMethod(m);
-        symbolTable.addClass(c) ;
-
+        //error checking for methods that are already declared
+        if(c.containsMethod(id))
+        {
+            error.add("The method " + id + " has already been declared in the class " + className) ;
+        }
+        else 
+        {
+            c.addMethod(m);
+            symbolTable.addClass(c) ;
+        }
+        
         temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly;
         stack.push(temp);
         temp = "";
@@ -247,8 +284,8 @@ public class PrintTree extends DepthFirstAdapter {
         inMethod = false ;
     }
 
-    public void caseAIdtypeMethodstmtseq(AIdtypeMethodstmtseq node) { //in class still
-        Classes c = symbolTable.getMyClass(myParent) ;
+    public void caseAIdtypeMethodstmtseq(AIdtypeMethodstmtseq node) { //class variable declarations - in class still
+        Classes c = symbolTable.getMyClass(className) ;
         
         node.getId().apply(this);
         node.getOptlidlist().apply(this);
@@ -262,14 +299,29 @@ public class PrintTree extends DepthFirstAdapter {
         String idlist = stack.pop();
         String id = stack.pop();
 
+        //error checking for duplicate class vars being declared
         Variable v = new Variable(id, type);
-        c.addVar(v);
+        if(c.containsVar(id))
+        {
+            error.add("The variable " + id + " has already been declared in the class " + className) ;
+        }
+        else {
+            c.addVar(v);
+        }
+        
         if (!idlist.equals("")) {
             String[] ids = idlist.split(",");
             for (int i = 0; i < ids.length; i++) {
-                Variable var = new Variable(ids[i], type);
-                c.addVar(var) ;
-             }
+                if(c.containsVar(ids[i]))
+                {
+                    error.add("The variable " + ids[i] + " has already been declared in the class " + className) ;
+                }
+                else
+                {
+                    Variable var = new Variable(ids[i], type);
+                    c.addVar(var) ;
+                }  
+            }
         }
         
         symbolTable.addClass(c) ;
@@ -280,7 +332,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAAssignstringMethodstmtseq(AAssignstringMethodstmtseq node) { //in class - string declaration
-        Classes c = symbolTable.getMyClass(myParent) ;
+        Classes c = symbolTable.getMyClass(className) ;
         
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
@@ -302,6 +354,7 @@ public class PrintTree extends DepthFirstAdapter {
             i = Integer.parseInt(temp.trim()) ;
         }
         
+        //error checking
         if(c.containsVar(id))
         {
             Variable v = c.getVar(id) ;
@@ -324,7 +377,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAPrintstmtMethodstmtseq(APrintstmtMethodstmtseq node) { //pirnt statement inside classes
-        Classes c = symbolTable.getMyClass(myParent) ;
+        Classes c = symbolTable.getMyClass(className) ;
         
         node.getPut().apply(this);
         node.getLparen().apply(this);
@@ -342,7 +395,7 @@ public class PrintTree extends DepthFirstAdapter {
         
         if(!c.containsVar(id))
         {
-            error.add("Error in " + myParent + ". The variable " + id + " has not"
+            error.add("Error in " + className + ". The variable " + id + " has not"
                     + "been declared and cannot be assigned a string.") ;
         } 
 
@@ -352,7 +405,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAAssignmentMethodstmtseq(AAssignmentMethodstmtseq node) {
-        Classes c = symbolTable.getMyClass(myParent) ;
+        Classes c = symbolTable.getMyClass(className) ;
         
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
@@ -372,7 +425,7 @@ public class PrintTree extends DepthFirstAdapter {
         
         if(!c.containsVar(id))
         {
-            error.add("Error in " + myParent + ". The variable " + id + " has not been declared yet." ) ;
+            error.add("Error in " + className + ". The variable " + id + " has not been declared yet." ) ;
         }
 
         temp = id + arr + assignment + get + lparen + rparen + semicolon;
@@ -381,7 +434,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAIncrementMethodstmtseq(AIncrementMethodstmtseq node) { //still in class
-        Classes c = symbolTable.getMyClass(myParent) ;
+        Classes c = symbolTable.getMyClass(className) ;
         
         String parent = myParent ;
         node.getId().apply(this);
@@ -400,12 +453,24 @@ public class PrintTree extends DepthFirstAdapter {
         
         if(!c.containsVar(id))
         {
-            error.add("Error in " + myParent + ". The variable " + id + " has not been declared yet." ) ;
+            error.add("Error in " + className + ". The variable " + id + " has not been declared yet." ) ;
+        }
+        else 
+        {
+            Variable v = c.getVar(id) ;
+            if(v.getType().equals("STRING") || v.getType().equals("STRING_ARRAY"))
+            {
+                error.add("Error in " + className + ". The variable " + id + " is type STRING and cannot be incremented.") ;
+            }
+            else if(v.getType().equals("BOOLEAN") || v.getType().equals("BOOBLEAN_ARRAY"))
+            {
+                error.add("Error in " + className + ". The variable " + id + " is type BOOLEAN and cannot be incremented.") ;
+            }
         }
     }
 
-    public void caseADecrementMethodstmtseq(ADecrementMethodstmtseq node) { 
-        Classes c = symbolTable.getMyClass(myParent) ;
+    public void caseADecrementMethodstmtseq(ADecrementMethodstmtseq node) { //still in class
+        Classes c = symbolTable.getMyClass(className) ;
         
         String parent = myParent ;
         node.getId().apply(this);
@@ -462,7 +527,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAAssignbooleanMethodstmtseq(AAssignbooleanMethodstmtseq node) { //get id
-        Classes c = symbolTable.getMyClass(myParent) ;
+        Classes c = symbolTable.getMyClass(className) ;
         
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
@@ -527,11 +592,11 @@ public class PrintTree extends DepthFirstAdapter {
         {
             if(symbolTable.containsClass(prevParent))
             {
-                String methodName = scopeMethod(id) ;
+                /*String methodName = scopeMethod(id) ;
                 if(!methodName.equals(""))
                 {
                     
-                }
+                }*/
             }
         }
         else if(inMethod)
@@ -2461,7 +2526,7 @@ public class PrintTree extends DepthFirstAdapter {
         }
     }
     
-    public String scopeMethod(String varId)
+   /* public String scopeMethod(String varId)
     {
        
         HashMap<String, Classes> classesMap = symbolTable.getAllClasses() ;
@@ -2488,5 +2553,114 @@ public class PrintTree extends DepthFirstAdapter {
         
         return "" ;
     }
+    */
     
+    public static String getVarIdInMethodInClass(String parent, String id, String varClassName, String varMethodName){
+        String idScope ;
+        int pIndex = 0;
+
+        if(!parent.equals(varMethodName))
+        {
+            while(!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1){
+                pIndex++;
+            }   
+            
+            Classes tempClass = symbolTable.getMyClass(varClassName) ;
+            Method tempMethod = tempClass.getMethod(varMethodName) ;
+            HashMap <String, Variable> methodVariables = tempMethod.getAllVars() ;
+            idScope = id + "_" + parent ;
+            
+            while(!methodVariables.containsKey(idScope) && pIndex < parentArr.size() - 1){
+                pIndex++ ;
+                idScope = id + "_" + parentArr.get(pIndex);
+            }
+            
+            if(pIndex >= parentArr.size())
+            {   //check for local var declaration in method 
+                if(!methodVariables.containsKey(id))
+                {
+                    return null ;
+                }
+                else
+                {
+                    Variable v = methodVariables.get(id);
+                    return v.getName() ;
+                }
+            }
+            else
+            {   //check case when method uses global var
+                if(!symbolTable.containsVar(idScope))
+                {
+                    if(!symbolTable.containsVar(id)){
+                        return null ;
+                    }
+                    else
+                    {
+                        Variable v = symbolTable.getVar(id);
+                        return v.getName();
+                    }
+                }
+                else {
+                    Variable v = symbolTable.getVar(idScope);
+                    return v.getName() ;
+                }
+            }
+        }
+        
+        return "" ;
+    } 
+    
+    public static String getVarIdInMethodNotInClass(String parent, String id, String varMethodName){
+        String idScope ;
+        int pIndex = 0;
+
+        if(!parent.equals(varMethodName))
+        {
+            while(!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1){
+                pIndex++;
+            }   
+            
+            Method tempMethod = symbolTable.getMethod(varMethodName) ;
+            HashMap <String, Variable> methodVariables = tempMethod.getAllVars() ;
+            idScope = id + "_" + parent ;
+            
+            while(!methodVariables.containsKey(idScope) && pIndex < parentArr.size() - 1){
+                pIndex++ ;
+                idScope = id + "_" + parentArr.get(pIndex);
+            }
+            
+            if(pIndex >= parentArr.size())
+            {   //check for local var declaration in method 
+                if(!methodVariables.containsKey(id))
+                {
+                    return null ;
+                }
+                else
+                {
+                    Variable v = methodVariables.get(id);
+                    return v.getName() ;
+                }
+            }
+            else
+            {   //check case when method uses global var
+                if(!symbolTable.containsVar(idScope))
+                {
+                    if(!symbolTable.containsVar(id)){
+                        return null ;
+                    }
+                    else
+                    {
+                        Variable v = symbolTable.getVar(id);
+                        return v.getName();
+                    }
+                }
+                else {
+                    Variable v = symbolTable.getVar(idScope);
+                    return v.getName() ;
+                }
+            }
+        }
+        
+        return "" ;
+    } 
 }
