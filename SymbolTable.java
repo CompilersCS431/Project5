@@ -36,7 +36,12 @@ public class SymbolTable {
                     return null;
             }
     }
+    
+    public HashMap getAllMethods()
+    {
+        return methodsTable ;
 
+    }
     public void addVar(Variable m) {
 
         globalVarTable.put(m.getName(), m);
@@ -58,7 +63,7 @@ public class SymbolTable {
             }
     }
 
-    public HashMap getVarTable(){
+    public HashMap getAllVars(){
         return globalVarTable ;
     }
 

@@ -38,7 +38,7 @@ public class Classes {
         return id ;
     }
     
-    public HashMap getClassVars()
+    public HashMap getAllVars()
     {
         return varTable ;
     }
