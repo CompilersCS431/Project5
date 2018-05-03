@@ -43,7 +43,7 @@ public class Method {
 		return localVarTable.containsKey(id);
 	}
 
-	public ArrayList getParams() {
+	public ArrayList getAllParams() {
             return parameters;
 	}
 

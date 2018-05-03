@@ -12,11 +12,11 @@ public class PrintTree extends DepthFirstAdapter {
     private boolean isId, inClass, inMethod;
     private String myParent;
     private String prevParent, className, methodName;
-    private int forCount ;
-    private int whileCount ;
-    private int switchCount ;
-    private int ifCount ;
-    public static ArrayList<String> parentArr ;
+    private int forCount;
+    private int whileCount;
+    private int switchCount;
+    private int ifCount;
+    public static ArrayList < String > parentArr;
 
     public PrintTree() {
         symbolTable = new SymbolTable();
@@ -28,13 +28,13 @@ public class PrintTree extends DepthFirstAdapter {
         prevParent = new String();
         forCount = 0;
         whileCount = 0;
-        switchCount = 0 ;
+        switchCount = 0;
         ifCount = 0;
-        parentArr = new ArrayList<>() ;
-        inClass = false ;
-        inMethod = false ;
-        className = "" ;
-        methodName = "" ;
+        parentArr = new ArrayList < > ();
+        inClass = false;
+        inMethod = false;
+        className = "";
+        methodName = "";
     }
 
     public void caseAProg(AProg node) {
@@ -53,31 +53,28 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAClassdeclClassmethodstmt(AClassdeclClassmethodstmt node) { //class declaration
-        inClass = true ;
+        inClass = true;
         node.getTclass().apply(this);
         node.getId().apply(this);
-        
+
         //add class to symbol table
-        String peekId = stack.peek() ;
-        Classes c = new Classes(peekId) ;
-        className = peekId ;
-        
+        String peekId = stack.peek();
+        Classes c = new Classes(peekId);
+        className = peekId;
+
         //error checking for declaring a class multiple times
-        if(symbolTable.containsClass(peekId))
-        {
-            error.add("The class " + peekId + " has already been declared.") ; 
-        }
-        else 
-        {
-            symbolTable.addClass(c) ;
+        if (symbolTable.containsClass(peekId)) {
+            error.add("The class " + peekId + " has already been declared.");
+        } else {
+            symbolTable.addClass(c);
 
         }
-        
+
         String tempPrevParent = prevParent;
         prevParent = myParent;
-        myParent = peekId ;
-        parentArr.add(0, peekId) ;
-        
+        myParent = peekId;
+        parentArr.add(0, peekId);
+
         node.getLcurly().apply(this);
         node.getMethodstmtseqs().apply(this);
         node.getRcurly().apply(this);
@@ -92,38 +89,35 @@ public class PrintTree extends DepthFirstAdapter {
         //System.out.println("class decl " + temp);
         stack.push(temp);
         temp = "";
-        
+
         //reset the scope
         myParent = prevParent;
         prevParent = tempPrevParent;
-        
-        inClass = false ;
-        className = "" ;
+
+        inClass = false;
+        className = "";
     }
 
     public void caseATypevarliststmtClassmethodstmt(ATypevarliststmtClassmethodstmt node) { //global method declaration
-        inMethod = true ;
-        
+        inMethod = true;
+
         node.getType().apply(this);
-        String peekType = stack.peek() ;
+        String peekType = stack.peek();
         node.getId().apply(this);
-        methodName = stack.peek() ;
-        
-        String tempPrevParent = prevParent ;
-        prevParent = myParent ;
-        myParent = methodName ;
-        
-        
+        methodName = stack.peek();
+
+        String tempPrevParent = prevParent;
+        prevParent = myParent;
+        myParent = methodName;
+
+
         Method m = new Method(methodName, peekType);
-        if(symbolTable.containsMethod(methodName))
-        {
-            error.add("The method " + methodName + " has already been declared in the global scope.") ;
-        }    
-        else
-        {
-            symbolTable.addMethod(m) ;
+        if (symbolTable.containsMethod(methodName)) {
+            error.add("The method " + methodName + " has already been declared in the global scope.");
+        } else {
+            symbolTable.addMethod(m);
         }
-        
+
         node.getLparen().apply(this);
         node.getVarlist().apply(this);
         node.getRparen().apply(this);
@@ -140,7 +134,7 @@ public class PrintTree extends DepthFirstAdapter {
         String id = stack.pop();
         String type = stack.pop();
 
-        
+
 
         String paramId = "";
         String paramType = "";
@@ -160,9 +154,7 @@ public class PrintTree extends DepthFirstAdapter {
             if (stmtseq.contains("RETURN")) {
                 error.add("Error in " + id + ". Void method cannot return value;");
             }
-        }
-        else
-        {
+        } else {
             //check for other return statements 
         }
 
@@ -172,14 +164,14 @@ public class PrintTree extends DepthFirstAdapter {
         temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly;
         stack.push(temp);
         temp = "";
-        
+
         inMethod = false;
-        
+
         //reset scope
         myParent = prevParent;
         prevParent = tempPrevParent;
-        
-        methodName = "" ;
+
+        methodName = "";
     }
 
     public void caseAIdlisttypeClassmethodstmt(AIdlisttypeClassmethodstmt node) { //global var declarations
@@ -194,7 +186,7 @@ public class PrintTree extends DepthFirstAdapter {
         String colon = stack.pop();
         String idlist = stack.pop();
         String id = stack.pop();
-        
+
         Variable v = new Variable(id, type);
         symbolTable.addVar(v);
 
@@ -229,22 +221,47 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseATypevarlistMethodstmtseq(ATypevarlistMethodstmtseq node) { //method declaration in class
-        inMethod = true ;
+        inMethod = true;
         //get the class
-        Classes c = symbolTable.getMyClass(className) ;
-        
-        String tempPrevParent = prevParent ;
-        prevParent = myParent ;
-        
+        Classes c = symbolTable.getMyClass(className);
+
+        String tempPrevParent = prevParent;
+        prevParent = myParent;
+
         node.getType().apply(this);
+        String peekType = stack.peek();
         node.getId().apply(this);
-        
-        String peekId = stack.peek() ;
-        myParent = peekId ;
-        methodName = peekId ;
-        
+
+        String peekId = stack.peek();
+        myParent = peekId;
+        methodName = peekId;
+        Method m = new Method(methodName, peekType);
+        //error checking for methods that are already declared
+        if (c.containsMethod(peekId)) {
+            error.add("The method " + peekId + " has already been declared in the class " + className);
+        } else {
+            c.addMethod(m);
+            symbolTable.addClass(c);
+        }
+
         node.getLparen().apply(this);
         node.getVarlist().apply(this);
+        String peekVarlist = stack.peek();
+        if (!peekVarlist.equals("")) {
+            String[] varlistArr = peekVarlist.split(",");
+            for (int i = 0; i < varlistArr.length; i++) {
+                String[] params = varlistArr[i].split(":");
+                String paramId = params[0];
+                String paramType = params[1];
+
+                Variable v = new Variable(paramId, paramType);
+                m.addParam(v);
+            }
+        }
+
+        c.addMethod(m);
+        symbolTable.addClass(c);
+
         node.getRparen().apply(this);
         node.getLcurly().apply(this);
         node.getStmtseq().apply(this);
@@ -259,45 +276,23 @@ public class PrintTree extends DepthFirstAdapter {
         String id = stack.pop();
         String type = stack.pop();
 
-        Method m = new Method(id, type);
 
-        if (!varlist.equals("")) {
-            String[] varlistArr = varlist.split(",");
-            for (int i = 0; i < varlistArr.length; i++) {
-                String[] params = varlistArr[i].split(":");
-                String paramId = params[0];
-                String paramType = params[1];
 
-                Variable v = new Variable(paramId, paramType);
-                m.addParam(v);
-            }
-        }
-        
-        //error checking for methods that are already declared
-        if(c.containsMethod(id))
-        {
-            error.add("The method " + id + " has already been declared in the class " + className) ;
-        }
-        else 
-        {
-            c.addMethod(m);
-            symbolTable.addClass(c) ;
-        }
-        
+
         temp = type + id + lparen + varlist + rparen + lcurly + stmtseq + rcurly;
         stack.push(temp);
         temp = "";
-        
+
         //reset the scope
         myParent = prevParent;
         prevParent = tempPrevParent;
-        
-        inMethod = false ;
+
+        inMethod = false;
     }
 
     public void caseAIdtypeMethodstmtseq(AIdtypeMethodstmtseq node) { //class variable declarations - in class still
-        Classes c = symbolTable.getMyClass(className) ;
-        
+        Classes c = symbolTable.getMyClass(className);
+
         node.getId().apply(this);
         node.getOptlidlist().apply(this);
         node.getColon().apply(this);
@@ -312,30 +307,26 @@ public class PrintTree extends DepthFirstAdapter {
 
         //error checking for duplicate class vars being declared
         Variable v = new Variable(id, type);
-        if(c.containsVar(id))
-        {
-            error.add("The variable " + id + " has already been declared in the class " + className) ;
-        }
-        else {
+        if (c.containsVar(id)) {
+            error.add("The variable " + id + " has already been declared in the class " + className);
+        } else {
             c.addVar(v);
         }
-        
+
         if (!idlist.equals("")) {
             String[] ids = idlist.split(",");
             for (int i = 0; i < ids.length; i++) {
-                if(c.containsVar(ids[i]))
-                {
-                    error.add("The variable " + ids[i] + " has already been declared in the class " + className) ;
+                if (c.containsVar(ids[i])) {
+                    error.add("The variable " + ids[i] + " has already been declared in the class " + className);
+                } else {
+                    Variable
+                    var = new Variable(ids[i], type);
+                    c.addVar(var);
                 }
-                else
-                {
-                    Variable var = new Variable(ids[i], type);
-                    c.addVar(var) ;
-                }  
             }
         }
-        
-        symbolTable.addClass(c) ;
+
+        symbolTable.addClass(c);
 
         temp = id + idlist + colon + type + semicolon;
         stack.push(temp);
@@ -343,8 +334,8 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAAssignstringMethodstmtseq(AAssignstringMethodstmtseq node) { //in class - string declaration
-        Classes c = symbolTable.getMyClass(className) ;
-        
+        Classes c = symbolTable.getMyClass(className);
+
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -356,46 +347,40 @@ public class PrintTree extends DepthFirstAdapter {
         String assignment = stack.pop();
         String arr = stack.pop();
         String id = stack.pop();
-        
-        int i = -1 ;
-        if(!arr.equals(""))
-        {
-            String temp = arr.replaceAll("[", "") ;
-            temp = temp.replaceAll("]", "") ;
-            i = Integer.parseInt(temp.trim()) ;
+
+        int i = -1;
+        if (!arr.equals("")) {
+            String temp = arr.replaceAll("[", "");
+            temp = temp.replaceAll("]", "");
+            i = Integer.parseInt(temp.trim());
         }
-        
+
         //error checking
-        if(c.containsVar(id))
-        {
-            Variable v = c.getVar(id) ;
+        if (c.containsVar(id)) {
+            Variable v = c.getVar(id);
             v.setValue(anychars);
-            if(i > -1)
-            {
+            if (i > -1) {
                 v.setIndex(i);
             }
-            
-            if(!v.getType().equals("STRING") || !v.getType().equals("STRING_ARRAY"))
-            {
-                error.add("Error in " + className + ". The variable " + id + " is "
-                        + "not type STRING and cannot store a string literal.") ;
+
+            if (!v.getType().equals("STRING") || !v.getType().equals("STRING_ARRAY")) {
+                error.add("Error in " + className + ". The variable " + id + " is " +
+                    "not type STRING and cannot store a string literal.");
             }
+        } else {
+            error.add("Error in " + className + ". The variable " + id + " has not" +
+                "been declared and cannot be assigned a string.");
         }
-        else 
-        {
-            error.add("Error in " + className + ". The variable " + id + " has not"
-                    + "been declared and cannot be assigned a string.") ;
-        }
-       
-           
+
+
         temp = id + arr + assignment + anychars + semicolon;
         stack.push(temp);
         temp = "";
     }
 
     public void caseAPrintstmtMethodstmtseq(APrintstmtMethodstmtseq node) { //pirnt statement inside classes
-        Classes c = symbolTable.getMyClass(className) ;
-        
+        Classes c = symbolTable.getMyClass(className);
+
         node.getPut().apply(this);
         node.getLparen().apply(this);
         node.getId().apply(this);
@@ -409,12 +394,11 @@ public class PrintTree extends DepthFirstAdapter {
         String id = stack.pop();
         String lparen = stack.pop();
         String put = stack.pop();
-        
-        if(!c.containsVar(id))
-        {
-            error.add("Error in " + className + ". The variable " + id + " has not"
-                    + "been declared and cannot be assigned a string.") ;
-        } 
+
+        if (!c.containsVar(id)) {
+            error.add("Error in " + className + ". The variable " + id + " has not" +
+                "been declared and cannot be assigned a string.");
+        }
 
         temp = put + lparen + id + arr + rparen + semicolon;
         stack.push(temp);
@@ -422,8 +406,8 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAAssignmentMethodstmtseq(AAssignmentMethodstmtseq node) {
-        Classes c = symbolTable.getMyClass(className) ;
-        
+        Classes c = symbolTable.getMyClass(className);
+
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -439,10 +423,9 @@ public class PrintTree extends DepthFirstAdapter {
         String assignment = stack.pop();
         String arr = stack.pop();
         String id = stack.pop();
-        
-        if(!c.containsVar(id))
-        {
-            error.add("Error in " + className + ". The variable " + id + " has not been declared yet." ) ;
+
+        if (!c.containsVar(id)) {
+            error.add("Error in " + className + ". The variable " + id + " has not been declared yet.");
         }
 
         temp = id + arr + assignment + get + lparen + rparen + semicolon;
@@ -451,9 +434,9 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAIncrementMethodstmtseq(AIncrementMethodstmtseq node) { //still in class
-        Classes c = symbolTable.getMyClass(className) ;
-        
-        String parent = myParent ;
+        Classes c = symbolTable.getMyClass(className);
+
+        String parent = myParent;
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getIncrement().apply(this);
@@ -463,36 +446,30 @@ public class PrintTree extends DepthFirstAdapter {
         String incr = stack.pop();
         String arr = stack.pop();
         String id = stack.pop();
-        
+
         temp = id + arr + incr + semicolon;
         stack.push(temp);
         temp = "";
-        
-        if(!c.containsVar(id))
-        {
-            error.add("Error in " + className + ". The variable " + id + " has "
-                    + "not been declared and cannot be incremented." ) ;
-        }
-        else 
-        {
-            Variable v = c.getVar(id) ;
-            if(v.getType().equals("STRING") || v.getType().equals("STRING_ARRAY"))
-            {
-                error.add("Error in " + className + ". The variable " + id + " "
-                        + "is type STRING and cannot be incremented.") ;
-            }
-            else if(v.getType().equals("BOOLEAN") || v.getType().equals("BOOBLEAN_ARRAY"))
-            {
-                error.add("Error in " + className + ". The variable " + id + 
-                        " is type BOOLEAN and cannot be incremented.") ;
+
+        if (!c.containsVar(id)) {
+            error.add("Error in " + className + ". The variable " + id + " has " +
+                "not been declared and cannot be incremented.");
+        } else {
+            Variable v = c.getVar(id);
+            if (v.getType().equals("STRING") || v.getType().equals("STRING_ARRAY")) {
+                error.add("Error in " + className + ". The variable " + id + " " +
+                    "is type STRING and cannot be incremented.");
+            } else if (v.getType().equals("BOOLEAN") || v.getType().equals("BOOBLEAN_ARRAY")) {
+                error.add("Error in " + className + ". The variable " + id +
+                    " is type BOOLEAN and cannot be incremented.");
             }
         }
     }
 
     public void caseADecrementMethodstmtseq(ADecrementMethodstmtseq node) { //still in class
-        Classes c = symbolTable.getMyClass(className) ;
-        
-        String parent = myParent ;
+        Classes c = symbolTable.getMyClass(className);
+
+        String parent = myParent;
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getDecrement().apply(this);
@@ -506,23 +483,17 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        if(!c.containsVar(id))
-        {
-            error.add("Error in " + myParent + ". The variable " + id + 
-                    " has not been declared and cannot be decremented." ) ;
-        }
-        else 
-        {
-            Variable v = c.getVar(id) ;
-            if(v.getType().equals("STRING") || v.getType().equals("STRING_ARRAY"))
-            {
-                error.add("Error in " + className + ". The variable " + id + 
-                        " is type STRING and cannot be decremented.") ;
-            }
-            else if(v.getType().equals("BOOLEAN") || v.getType().equals("BOOBLEAN_ARRAY"))
-            {
-                error.add("Error in " + className + ". The variable " + id + 
-                        " is type BOOLEAN and cannot be decremented.") ;
+        if (!c.containsVar(id)) {
+            error.add("Error in " + myParent + ". The variable " + id +
+                " has not been declared and cannot be decremented.");
+        } else {
+            Variable v = c.getVar(id);
+            if (v.getType().equals("STRING") || v.getType().equals("STRING_ARRAY")) {
+                error.add("Error in " + className + ". The variable " + id +
+                    " is type STRING and cannot be decremented.");
+            } else if (v.getType().equals("BOOLEAN") || v.getType().equals("BOOBLEAN_ARRAY")) {
+                error.add("Error in " + className + ". The variable " + id +
+                    " is type BOOLEAN and cannot be decremented.");
             }
         }
     }
@@ -544,34 +515,30 @@ public class PrintTree extends DepthFirstAdapter {
         String newstmt = stack.pop();
         String assignment = stack.pop();
         String arr = stack.pop();
-        String id = stack.pop();      
+        String id = stack.pop();
 
         temp = id + arr + assignment + newstmt + secondid + lparen + rparen + semicolon;
         stack.push(temp);
         temp = "";
-        
-        Classes c = symbolTable.getMyClass(className) ;
-        if(!arr.equals(""))
-        {
-            secondid = secondid + "_ARRAY" ;
+
+        Classes c = symbolTable.getMyClass(className);
+        if (!arr.equals("")) {
+            secondid = secondid + "_ARRAY";
         }
-        
-        if(c.containsVar(id))
-        {
-            error.add("Error in " + className +". The varialbe " + id + 
-                    " has already been declared.") ;
-        }
-        else
-        {
-            Variable v = new Variable(id, secondid);        
-            c.addVar(v) ;
-            symbolTable.addClass(c) ;
+
+        if (c.containsVar(id)) {
+            error.add("Error in " + className + ". The varialbe " + id +
+                " has already been declared.");
+        } else {
+            Variable v = new Variable(id, secondid);
+            c.addVar(v);
+            symbolTable.addClass(c);
         }
     }
 
     public void caseAAssignbooleanMethodstmtseq(AAssignbooleanMethodstmtseq node) { //boolean assignment inside class
-        Classes c = symbolTable.getMyClass(className) ;
-        
+        Classes c = symbolTable.getMyClass(className);
+
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -587,19 +554,15 @@ public class PrintTree extends DepthFirstAdapter {
         temp = id + arr + assignment + semicolon;
         stack.push(temp);
         temp = "";
-        
-        if(!c.containsVar(id))
-        {
-            error.add("Error in " + className + ". The variable " + id + 
-                    " has not been declared and cannot be assigned a value." ) ;
-        }
-        else 
-        {
-            Variable v = c.getVar(id) ;
-            if(v.getType().equals("STRING") || v.getType().equals("STRING_ARRAY"))
-            {
-                error.add("Error in " + className + ". The variable " + id + " is type STRING"
-                        + " and cannot store boolean values or expressions." ) ;
+
+        if (!c.containsVar(id)) {
+            error.add("Error in " + className + ". The variable " + id +
+                " has not been declared and cannot be assigned a value.");
+        } else {
+            Variable v = c.getVar(id);
+            if (v.getType().equals("STRING") || v.getType().equals("STRING_ARRAY")) {
+                error.add("Error in " + className + ". The variable " + id + " is type STRING" +
+                    " and cannot store boolean values or expressions.");
             }
         }
     }
@@ -622,7 +585,7 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAExprassignmentStmt(AExprassignmentStmt node) {
         String parent = myParent;
-        
+
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -639,146 +602,114 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable v = null ;
-        if(inClass)
-        {
-            if(inMethod)
-            {
-                Variable var = getVarIdInMethodInClass(parent, id, className, methodName) ;
-                if(var == null)
-                {
-                    error.add("Error in method " + methodName + " in class " + className + "."
-                            + " The variable " + id + " has not been declared "
-                                    + "and cannot be assigned a value.") ;
+        Variable v = null;
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
                 }
-                else
-                {
-                    v = var ;
-                }
-            }
-            else
-            {
-                Variable var = getVarInClassNotInMethod(parent, id, className) ;
-                if(var == null)
-                {
-                    error.add("Error in class " + className + "."
-                            + " The variable " + id + " has not been declared "
-                                    + "and cannot be assigned a value.") ;
-                }
-                else
-                {
-                    v = var ;
+            } else {
+                Variable
+                var = getVarInClassNotInMethod(parent, id, className);
+                if (var == null) {
+                    error.add("Error in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
                 }
             }
-        }
-        else if(inMethod)
-        {
-            Variable var = getVarIdInMethodNotInClass(parent, id, methodName) ;
-            if(var == null)
-            {
-                error.add("Error in method " + methodName + "."
-                            + " The variable " + id + " has not been declared "
-                                    + "and cannot be assigned a value.") ;
-            }
-            else
-            {
-                v = var ;
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be assigned a value.");
+            } else {
+                v =
+                    var;
             }
         }
         //error checking to compare the type against the expression being assigned
-        
-        String type ;
-        if(parent.equals(""))
-        {
+
+        String type;
+        if (parent.equals("")) {
             parent = "GLOBAL";
         }
-        if(v != null)
-        {
+        if (v != null) {
             type = v.getType();
 
-            if(type.equals("INT"))
-            {
-                if(expr.contains("."))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type INT and cannot store a real numbers.") ;
-                }
-                if(expr.contains("\""))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type INT and cannot store a string literal.");
-                }
-            }
-            else if(type.equals("BOOLEAN"))
-            {
-                if(!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1"))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type BOOLEAN and can only store boolean values.") ;
-                }
-            }
-            else if(type.equals("STRING"))
-            {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                    + "The variable " + id + " is type STRING and can only store string literals.");
-            }
-            else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
-                if (expr.charAt(0) == '"') {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type " + type + " and cannot store a string");
-                }
-            }
-            else if(type.contains("ARRAY"))
-            {
-                if(arr.equals(""))
-                {
+            if (type.equals("INT")) {
+                String regex = "^\\d*\\.\\d+";
+                if (expr.matches(regex)) {
                     error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is an array. Please specify the array index.") ;
+                        "The variable " + id + " is type INT and cannot store a real numbers.");
                 }
-                if(type.equals("INT_ARRAY"))
-                {
-                    if(expr.contains("."))
-                    {
-                        error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                                + "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a real numbers.") ;
+                if (expr.contains("\"")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type INT and cannot store a string literal.");
+                }
+            } else if (type.equals("BOOLEAN")) {
+                if (!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type BOOLEAN and can only store boolean values.");
+                }
+            } else if (type.equals("STRING")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is type STRING and can only store string literals.");
+            } else if (type.equals("INT") || type.equals("REAL") || type.equals("BOOLEAN")) {
+                if (expr.charAt(0) == '"') {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type " + type + " and cannot store a string");
+                }
+            } else if (type.contains("ARRAY")) {
+                if (arr.equals("")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is an array. Please specify the array index.");
+                }
+                if (type.equals("INT_ARRAY")) {
+                    if (expr.contains(".")) {
+                        error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a real numbers.");
                     }
-                    if(expr.contains("\""))
-                    {
-                        error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                                + "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a string literal.");
+                    if (expr.contains("\"")) {
+                        error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a string literal.");
                     }
-                }
-                else if(type.equals("BOOLEAN_ARRAY"))
-                {
-                    if(!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1"))
-                    {
-                        error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                                + "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAYand can only store boolean values.") ;
+                } else if (type.equals("BOOLEAN_ARRAY")) {
+                    if (!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1")) {
+                        error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAYand can only store boolean values.");
                     }
-                }
-                else if(type.equals("STRING_ARRAY"))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                        + "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and can only store string literals.");
-                }
-                else if (type.equals("INT_ARRAY") || type.equals("DOUBLE_ARRAY") || type.equals("BOOLEAN_BOOLEAN")) {
+                } else if (type.equals("STRING_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is  " + type.replaceAll("_ARRAY", "") + " ARRAY and can only store string literals.");
+                } else if (type.equals("INT_ARRAY") || type.equals("DOUBLE_ARRAY") || type.equals("BOOLEAN_BOOLEAN")) {
                     if (expr.charAt(0) == '"') {
-                        error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                                + "The variable " + id + " is a " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a string");
+                        error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                            "The variable " + id + " is a " + type.replaceAll("_ARRAY", "") + " ARRAY and cannot store a string");
                     }
                 }
 
             }
-        }
-        else {
-            error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                + "The variable " + id + " is undeclared. A variable must be declared before it can be assigned a value.");
+        } else {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is undeclared. A variable must be declared before it can be assigned a value.");
         }
     }
 
     public void caseAExpranycharStmt(AExpranycharStmt node) {
         String parent = myParent;
-        
+
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -796,78 +727,59 @@ public class PrintTree extends DepthFirstAdapter {
         temp = "";
 
         Variable v = null;
-        if(inClass)
-        {
-            if(inMethod)
-            {
-                Variable var = getVarIdInMethodInClass(parent, id, className, methodName) ;
-                if(var == null)
-                {
-                    error.add("Error in method " + methodName + " in class " + className + "."
-                            + " The variable " + id + " has not been declared "
-                                    + "and cannot be assigned a value.") ;
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
                 }
-                else
-                {
-                    v = var ;
-                }
-            }
-            else
-            {
-                Variable var = getVarInClassNotInMethod(parent, id, className) ;
-                if(var == null)
-                {
-                    error.add("Error in class " + className + "."
-                            + " The variable " + id + " has not been declared "
-                                    + "and cannot be assigned a value.") ;
-                }
-                else
-                {
-                    v = var ;
+            } else {
+                Variable
+                var = getVarInClassNotInMethod(parent, id, className);
+                if (var == null) {
+                    error.add("Error in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
                 }
             }
-        }
-        else if(inMethod)
-        {
-            Variable var = getVarIdInMethodNotInClass(parent, id, methodName) ;
-            if(var == null)
-            {
-                error.add("Error in method " + methodName + "."
-                            + " The variable " + id + " has not been declared "
-                                    + "and cannot be assigned a value.") ;
-            }
-            else
-            {
-                v = var ;
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be assigned a value.");
+            } else {
+                v =
+                    var;
             }
         }
-       
-        
-        String type ;
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL" ;
+
+
+        String type;
+        if (parent.equals("")) {
+            parent = "GLOBAL";
         }
-        if(v != null){
+        if (v != null) {
             type = v.getType();
-            if(arr.equals(""))
-            {
-                if (!type.equals("STRING")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type " + type.toUpperCase() + " and cannot store a string literal.");
+            if (arr.equals("")) {
+                if (!type.equals("STRING") || !type.equals("STRING_ARRAY")) {
+                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                        "The variable " + id + " is type " + type.toUpperCase() + " and cannot store a string literal.");
                 }
             }
-            else
-            {
-                if (!type.equals("STRING_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is not an array.");
-                }
-            }
-        }
-        else {
+        } else {
             error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                    "The variable " + id + " is undeclared. A variable must be declared before it can be assigned a value.") ;
+                "The variable " + id + " is undeclared. A variable must be declared before it can be assigned a value.");
         }
     }
 
@@ -893,237 +805,153 @@ public class PrintTree extends DepthFirstAdapter {
         temp = "";
 
         //error checking for scope and var re-declaration
-       // Variable v = null;
+        // Variable v = null;
         //String idScope = id + "_" + parent ;      
-        
-        if(inClass)
-        {
-            if(inMethod)
-            {
-                Variable var = getVarIdInMethodInClass(parent, id, className, methodName) ;
-               
-                if(var == null)
-                {
-                    Classes tempClass = symbolTable.getMyClass(className) ;
-                    Method tempM = tempClass.getMethod(methodName) ;
-                    if(parent.equals(methodName))
-                    {
-                        Variable v = new Variable(id, type) ;
-                        tempM.addVar(v);
-                        
-                        if (!idlist.equals("")) 
-                        {
-                            String[] ids = idlist.split(",");
-                            for (int i = 0; i < ids.length; i++) {
-                                var = getVarIdInMethodInClass(parent, ids[i], className, methodName) ;
-                                
-                                if(var == null)
-                                {
-                                    v = new Variable(ids[i], type) ;
-                                    tempM.addVar(v) ;
-                                }
-                                else
-                                {
-                                    error.add("Error in class " + className + "in method " + methodName
-                                         + ". The variable " + ids[i] + " is already declared in this scope.") ;
-                                }
 
-                            }
-                        }
-                        
-                        tempClass.addMethod(tempM);
-                        symbolTable.addClass(tempClass);
+        if (inClass) {
+            if (inMethod) {
+                Classes c = symbolTable.getMyClass(className);
+                Method m = c.getMethod(methodName);
+                if (!parent.equals(methodName)) {
+                    String scopeId = id + "_" + parent;
+                    if (!m.containsVar(scopeId)) {
+                        Variable v = new Variable(scopeId, type);
+                        m.addVar(v);
+                        c.addMethod(m);
+                        symbolTable.addClass(c);
+                    } else {
+                        error.add("Error in class " + className + "in method " + methodName + "in" +
+                            " " + parent.replaceAll("\\d", "") +
+                            ". The variable " + id + " is already declared in this scope.");
                     }
-                    else
-                    {
-                        String idScope = id + "_" + parent ;
-                        Variable v = new Variable(idScope, type) ;
-                        tempM.addVar(v);
-                        
-                        if (!idlist.equals("")) 
-                        {
-                            String[] ids = idlist.split(",");
-                            for (int i = 0; i < ids.length; i++) {
-                                idScope = ids[i] + "_" + parent ;
-                                var = getVarIdInMethodInClass(parent, idScope, className, methodName) ;
-                                
-                                if(var == null)
-                                {
-                                    v = new Variable(idScope, type) ;
-                                    tempM.addVar(v) ;
-                                }
-                                else
-                                {
-                                    error.add("Error in class " + className + "in method " + methodName
-                                         + ". The variable " + ids[i] + " is already declared in this scope.") ;
-                                }
-
-                            }
-                        }
-
-                        tempClass.addMethod(tempM);
-                        symbolTable.addClass(tempClass);
-                        
+                } else {
+                    if (!m.containsVar(id)) {
+                        Variable v = new Variable(id, type);
+                        m.addVar(v);
+                        c.addMethod(m);
+                        symbolTable.addClass(c);
+                    } else {
+                        error.add("Error in class " + className + "in method " + methodName +
+                            ". The variable " + id + " is already declared in this scope.");
                     }
-                }
-                else
-                {
-                    error.add("Error in class " + className + "in method " + methodName
-                        + ". The variable " + id + " is already declared in this scope.") ;
                 }
             }
-            else
-            {
-                Variable var = getVarInClassNotInMethod(parent, id, className) ;
-                if(var == null)
-                {
-                   Classes tempClass = symbolTable.getMyClass(className) ;
-                   if(parent.equals(className))
-                   {
-                       Variable v = new Variable(id, type) ;
-                       tempClass.addVar(v) ;
-                       
-                       if (!idlist.equals("")) 
-                        {
-                            String[] ids = idlist.split(",");
-                            for (int i = 0; i < ids.length; i++) {
-                                var = getVarIdInMethodInClass(parent, ids[i], className, methodName) ;
-                                
-                                if(var == null)
-                                {
-                                    v = new Variable(ids[i], type) ;
-                                    tempClass.addVar(v) ;
-                                }
-                                else
-                                {
-                                    error.add("Error in class " + className 
-                                         + ". The variable " + ids[i] + " is already declared in this scope.") ;
-                                }
-
-                            }
-                        }
-                       
-                       symbolTable.addClass(tempClass) ;
-                   }
-                   else
-                   {
-                       String idScope = id + "_" + parent ;
-                       Variable v = new Variable(idScope, type) ;
-                       tempClass.addVar(v) ;
-                       
-                       if (!idlist.equals("")) 
-                        {
-                            String[] ids = idlist.split(",");
-                            for (int i = 0; i < ids.length; i++) {
-                                idScope = ids[i] + "_" + parent ;
-                                var = getVarIdInMethodInClass(parent, idScope, className, methodName) ;
-                                
-                                if(var == null)
-                                {
-                                    v = new Variable(idScope, type) ;
-                                    tempClass.addVar(v) ;
-                                }
-                                else
-                                {
-                                    error.add("Error in class " + className + "in method " + methodName
-                                         + ". The variable " + ids[i] + " is already declared in this scope.") ;
-                                }
-
-                            }
-                        }
-                       
-                       symbolTable.addClass(tempClass) ;
-                   }
+        } else if (inMethod) {
+            Method m = symbolTable.getMethod(methodName);
+            if (!parent.equals(methodName)) {
+                String scopeId = id + "_" + parent;
+                if (!m.containsVar(scopeId)) {
+                    Variable v = new Variable(scopeId, type);
+                    m.addVar(v);
+                    symbolTable.addMethod(m);
+                } else {
+                    error.add("Error in class " + className + "in method " + methodName + "in" +
+                        " " + parent.replaceAll("\\d", "") +
+                        ". The variable " + id + " is already declared in this scope.");
                 }
-                else
-                {
-                    error.add("Error in method " + methodName
-                        + ". The variable " + id + " is already declared in this scope.") ;
+            } else {
+                if (!m.containsVar(id)) {
+                    Variable v = new Variable(id, type);
+                    m.addVar(v);
+                    symbolTable.addMethod(m);
+                } else {
+                    error.add("Error in method " + methodName + "in " +
+                        parent.replaceAll("\\d", "") +
+                        ". The variable " + id + " is already declared in this scope.");
                 }
             }
         }
-        else if(inMethod)
-        {
-            Variable var = getVarIdInMethodNotInClass(parent, id, methodName) ;
-               
-            if(var == null)
-            {
-                Method tempM = symbolTable.getMethod(methodName) ;
-                if(parent.equals(methodName))
-                {
-                    Variable v = new Variable(id, type) ;
-                    tempM.addVar(v);
 
-                    if (!idlist.equals("")) 
-                    {
-                        String[] ids = idlist.split(",");
-                        for (int i = 0; i < ids.length; i++) {
-                            var = getVarIdInMethodNotInClass(parent, ids[i], methodName) ;
+        if (!idlist.equals("")) {
+            if (inClass) {
+                if (inMethod) {
+                    Variable
+                    var = null;
+                    String[] ids = idlist.split(",");
+                    Classes tempClass = symbolTable.getMyClass(className);
+                    Method m = tempClass.getMethod(methodName);
 
-                            if(var == null)
-                            {
-                                v = new Variable(ids[i], type) ;
-                                tempM.addVar(v) ;
-                            }
-                            else
-                            {
-                                error.add("Error in method " + methodName
-                                     + ". The variable " + ids[i] + " is already declared in this scope.") ;
-                            }
-
+                    for (int i = 0; i < ids.length; i++) {
+                        if (!m.containsVar(id)) {
+                            var = new Variable(ids[i], type);
+                            m.addVar(var);
+                        } else {
+                            error.add("Error in class " + className + "in method " + methodName +
+                                " " + parent.replaceAll("\\d", "") +
+                                ". The variable " + ids[i] + " is already declared in this scope.");
                         }
                     }
 
-                    symbolTable.addMethod(tempM);
+                    tempClass.addMethod(m);
+                    symbolTable.addClass(tempClass);
                 }
-                else
-                {
-                    String idScope = id + "_" + parent ;
-                    Variable v = new Variable(idScope, type) ;
-                    
-                    if (!idlist.equals("")) 
-                    {
-                        String[] ids = idlist.split(",");
-                        for (int i = 0; i < ids.length; i++) {
-                            idScope = ids[i] + "_" + parent ;
-                            var = getVarIdInMethodNotInClass(parent, idScope, methodName) ;
-                            if(var == null)
-                            {
-                                v = new Variable(idScope, type) ;
-                                tempM.addVar(v) ;
-                            }
-                            else
-                            {
-                                error.add("Error in method " + methodName
-                                     + ". The variable " + ids[i] + " is already declared in this scope.") ;
-                            }
+            } else if (inMethod) {
+                Variable
+                var = null;
+                String[] ids = idlist.split(",");
+                Method m = symbolTable.getMethod(methodName);
 
-                        }
+                for (int i = 0; i < ids.length; i++) {
+                    if (!m.containsVar(id)) {
+                        var = new Variable(ids[i], type);
+                        m.addVar(var);
+                    } else {
+                        error.add("Error in method " + methodName + " in " + parent.replaceAll("\\d", "") +
+                            ". The variable " + ids[i] + " is already declared in this scope.");
                     }
-                    
-                    tempM.addVar(v);
-                    symbolTable.addMethod(tempM);
-
                 }
+                symbolTable.addMethod(m);
             }
-            else
-            {
-                error.add("Error in class " + className + "in method " + methodName
-                    + ". The variable " + id + " is already declared in this scope.") ;
-            }
+
         }
 
     }
 
     public void caseAIfbooleanStmt(AIfbooleanStmt node) {
         String tempPrevParent = prevParent;
-        
+
         prevParent = myParent;
         myParent = "IF" + ifCount;
         parentArr.add(0, myParent);
+        String parent = myParent;
         node.getIf().apply(this);
         node.getLparen().apply(this);
         node.getBoolid().apply(this);
+
+        if (isId) {
+            String id = stack.peek();
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable
+                    var = getVarIdInMethodInClass(parent, id, className, methodName);
+                    if (var == null) {
+                        error.add("Error in class " + className + " in method " + methodName + "." +
+                            " The variable " + id + " has not been declared " +
+                            "and cannot be used in an IF statement.");
+                    }
+
+                } else {
+                    Variable
+                    var = getVarInClassNotInMethod(parent, id, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + id + " has not been declared " +
+                            "and cannot be used in an IF statement.");
+                    }
+
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, id, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                }
+            }
+        }
+
         node.getRparen().apply(this);
         node.getThen().apply(this);
         node.getOptionalelse().apply(this);
@@ -1189,46 +1017,63 @@ public class PrintTree extends DepthFirstAdapter {
         String peekId = stack.peek();
 
         //add the iterator declaration if there is one
-        Variable var = null ;
-        String scopeId = peekId + "_" + myParent ;
-        if(!peekType.equals(""))
-        {
-            if(inClass)
-            {
-                if(inMethod)
-                {
-                    var = getVarIdInMethodInClass(myParent, peekId, className, methodName) ;
+        Variable
+        var = null;
+        String scopeId = peekId + "_" + myParent;
+        if (!peekType.equals("")) {
+            if (inClass) {
+                if (inMethod) {
+                    var = getVarIdInMethodInClass(myParent, peekId, className, methodName);
+                    if (var == null) {
+                        var = new Variable(scopeId, peekType);
+                        Method m = symbolTable.getMethod(methodName);
+                        m.addVar(var);
+                        symbolTable.addMethod(m);
+                    }
+                }
+            } else if (inMethod) {
+                var = getVarIdInMethodNotInClass(myParent, peekId, methodName);
+                if (var == null) {
+                    var = new Variable(scopeId, peekType);
+                    Method m = symbolTable.getMethod(methodName);
+                    m.addVar(var);
+                    symbolTable.addMethod(m);
                 }
             }
-        }
-        else {
-            if(!symbolTable.containsVar(peekId))
-            {
-                error.add("Error in FOR. The variable " + peekId + " is not declared and cannot be assigned a value.");
+        } else {
+            if (inClass) {
+                if (inMethod) {
+                    var = getVarIdInMethodInClass(myParent, peekId, className, methodName);
+                    if (var == null) {
+                        error.add("Error in " + myParent.replaceAll("\\d", "") +
+                            " in method " + methodName + " in class " +
+                            className + ". The variable " + peekId + " has not been declared yet.");
+                    }
+                }
+
+            } else if (inMethod) {
+                var = getVarIdInMethodNotInClass(myParent, peekId, methodName);
+                if (var == null) {
+                    error.add("Error in " + myParent.replaceAll("\\d", "") +
+                        " in method " + methodName + ". The variable " + peekId + " has not been declared yet.");
+                }
             }
         }
 
         node.getAssignment().apply(this);
         node.getExpr().apply(this);
-        String peekExp = stack.peek() ;
-        if(peekType.equals("INT"))
-        {
-            if(peekExp.contains("."))
-            {
+        String peekExp = stack.peek();
+        if (peekType.equals("INT")) {
+            if (peekExp.contains(".")) {
                 error.add("Error in FOR. The variable " + peekId + " is type INT and cannot store a real number.");
-            }
-            else if(peekExp.contains("\""))
-            {
+            } else if (peekExp.contains("\"")) {
                 error.add("Error in FOR. The variable " + peekId + " is type INT and cannot store a string literal.");
             }
-        }
-        else if(peekType.equals("BOOLEAN"))
-        {
+        } else if (peekType.equals("BOOLEAN")) {
             if (!peekExp.equals("TRUE") || !peekExp.equals("FALSE") || !peekExp.equals("0") || !peekExp.equals("1")) {
                 error.add("Error in FOR. The variable " + peekId + " is type BOOLEAN and can only store boolean values");
             }
-        }
-        else if (peekType.equals("INT") || peekType.equals("DOUBLE") || peekType.equals("BOOLEAN")) {
+        } else if (peekType.equals("INT") || peekType.equals("DOUBLE") || peekType.equals("BOOLEAN")) {
             if (peekExp.charAt(0) == '"') {
                 error.add("The variable " + peekId + " is type " + peekType + " and cannot store a string");
             }
@@ -1269,7 +1114,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAGetStmt(AGetStmt node) {
-        String parent = myParent ;
+        String parent = myParent;
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -1290,34 +1135,60 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable v ;
-        String type ;
-        String idScope = getVarId(parent, id);
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL";
-        }
-        if(idScope == null)
-        {
-            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                    "The variable " + id + " has not been declared.");
-        }
-        else {
-            v = symbolTable.getVar(idScope);
-            type = v.getType();
-            if(type.contains("ARRAY"))
-            {
-                if(arr.equals(""))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is an array. Please specify the index.") ;
+        Variable v = null;
+        String type = "";
+
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            } else {
+                Variable
+                var = getVarInClassNotInMethod(parent, id, className);
+                if (var == null) {
+                    error.add("Error in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
                 }
             }
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be assigned a value.");
+            } else {
+                v =
+                    var;
+                type = v.getType();
+            }
         }
+
+        if (type.contains("ARRAY")) {
+            if (arr.equals("")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is an array. Please specify the index.");
+            }
+        }
+
     }
 
     public void caseAPutStmt(APutStmt node) {
-        String parent = myParent ;
+        String parent = myParent;
         node.getPut().apply(this);
         node.getLparen().apply(this);
         node.getId().apply(this);
@@ -1336,30 +1207,60 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable v ;
-        String type ;
-        String idScope = getVarId(parent, id);
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL" ;
-        }
-        if(idScope == null)
-        {
-            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                    "The variable " + id + " has not been declared.") ;
-        }
-        else {
-            v = symbolTable.getVar(idScope);
-            type = v.getType();
-            if(type.contains("ARRAY"))
-            {
-                if(arr.equals(""))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is an array. Please specify the index.") ;
+        Variable v = null;
+        String type = "";
+
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            } else {
+                Variable
+                var = getVarInClassNotInMethod(parent, id, className);
+                if (var == null) {
+                    error.add("Error in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
                 }
             }
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be assigned a value.");
+            } else {
+                v =
+                    var;
+                type = v.getType();
+            }
         }
+
+        if (parent.equals("")) {
+            parent = "GLOBAL";
+        }
+
+        if (type.contains("ARRAY")) {
+            if (arr.equals("")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is an array. Please specify the index.");
+            }
+        }
+
 
     }
 
@@ -1379,49 +1280,80 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable v ;
-        String type ;
-        String idScope = getVarId(parent, id);
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL" ;
-        }
-        if(idScope != null)
-        {
-            v = symbolTable.getVar(idScope);
-            type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type STRING and cannot be incremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type BOOLEAN and cannot be incremented.");
+        Variable v = null;
+        String type = "";
+
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
             }
-            else if(type.contains("ARRAY"))
+            /*else
             {
-                if(arr.equals(""))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is an array. Please specify the index.");
-                }
-                else if (type.equals("STRING_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is a STRING ARRAY and cannot be incremented.");
-                } else if (type.equals("BOOLEAN_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is a BOOLEAN ARRAY and cannot be incremented.");
-                }
+            Variable var = getVarInClassNotInMethod(parent, id, className) ;
+            if(var == null)
+            {
+            error.add("Error in class " + className + "."
+            + " The variable " + id + " has not been declared "
+            + "and cannot be incremented.") ;
+            }
+            else
+            {
+            v = var ;
+            type = v.getType() ;
+            }
+            }*/
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be incremented.");
+            } else {
+                v =
+                    var;
+                type = v.getType();
             }
         }
-        else {
-            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                    "The variable " + id + " has not been declared and cannot be incremented.");
+
+        if (parent.equals("")) {
+            parent = "GLOBAL";
         }
+
+        if (type.equals("STRING")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type STRING and cannot be incremented.");
+        } else if (type.equals("BOOLEAN")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type BOOLEAN and cannot be incremented.");
+        } else if (type.contains("ARRAY")) {
+            if (arr.equals("")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is an array. Please specify the index.");
+            } else if (type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is a STRING ARRAY and cannot be incremented.");
+            } else if (type.equals("BOOLEAN_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is a BOOLEAN ARRAY and cannot be incremented.");
+            }
+        }
+
 
     }
 
     public void caseADecrementStmt(ADecrementStmt node) {
-        String parent = myParent ;
+        String parent = myParent;
         node.getId().apply(this);
         node.getOptionalidarray().apply(this);
         node.getDecrement().apply(this);
@@ -1435,51 +1367,79 @@ public class PrintTree extends DepthFirstAdapter {
         temp = id + arr + decrement + semicolon;
         stack.push(temp);
         temp = "";
+        Variable v = null;
+        String type = "";
 
-        Variable v ;
-        String type ;
-        String idScope = getVarId(parent, id);
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL" ;
-        }
-        if(idScope != null)
-        {
-            v = symbolTable.getVar(idScope);
-            type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type STRING and cannot be decremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type BOOLEAN and cannot be decremented.");
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be decremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
             }
-            else if(type.contains("ARRAY"))
+            /*else
             {
-                if(arr.equals(""))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is an array. Please specify the index.");
-                }
-                else if (type.equals("STRING_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is a STRING ARRAY and cannot be decremented.");
-                } else if (type.equals("BOOLEAN_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is a BOOLEAN ARRAY and cannot be decremented.");
-                }
+            Variable var = getVarInClassNotInMethod(parent, id, className) ;
+            if(var == null)
+            {
+            error.add("Error in class " + className + "."
+            + " The variable " + id + " has not been declared "
+            + "and cannot be incremented.") ;
+            }
+            else
+            {
+            v = var ;
+            type = v.getType() ;
+            }
+            }*/
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be decremented.");
+            } else {
+                v =
+                    var;
+                type = v.getType();
             }
         }
-        else
-        {
-            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                    "The variable " + id + " has not been declared and cannot be decremented.");
+
+        if (parent.equals("")) {
+            parent = "GLOBAL";
         }
 
-
+        if (type.equals("STRING")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type STRING and cannot be decremented.");
+        } else if (type.equals("BOOLEAN")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type BOOLEAN and cannot be decremented.");
+        } else if (type.contains("ARRAY")) {
+            if (arr.equals("")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is an array. Please specify the index.");
+            } else if (type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is a STRING ARRAY and cannot be decremented.");
+            } else if (type.equals("BOOLEAN_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is a BOOLEAN ARRAY and cannot be decremented.");
+            }
+        }
     }
 
     public void caseANewassignmentStmt(ANewassignmentStmt node) {
+        String parent = myParent;
+
         node.getFirstid().apply(this);
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
@@ -1501,9 +1461,92 @@ public class PrintTree extends DepthFirstAdapter {
         temp = id + arr + assignment + newkeyword + secondid + lparen + rparen + semicolon;
         stack.push(temp);
         temp = "";
+
+        if (inClass) {
+            if (inMethod) {
+                Classes tempC = symbolTable.getMyClass(className);
+                Method tempM = tempC.getMethod(methodName);
+                Variable v = new Variable(id, secondid);
+                tempM.addVar(v);
+                tempC.addMethod(tempM);
+                symbolTable.addClass(tempC);
+            }
+        } else if (inMethod) {
+            Method m = symbolTable.getMethod(methodName);
+            Variable v = new Variable(id, secondid);
+            m.addVar(v);
+            symbolTable.addMethod(m);
+        }
+
+        /*  
+          if(inClass)
+          {
+              if(inMethod)
+              {
+                  Variable var = getVarIdInMethodInClass(parent, id, className, methodName) ;
+                 
+                  if(var == null)
+                  {
+                      Classes tempClass = symbolTable.getMyClass(className) ;
+                      Method tempM = tempClass.getMethod(methodName) ;
+                      if(parent.equals(methodName))
+                      {
+                          Variable v = new Variable(id, secondid) ;
+                          tempM.addVar(v);                       
+                          tempClass.addMethod(tempM);
+                          symbolTable.addClass(tempClass);
+                      }
+                      else
+                      {
+                          String idScope = id + "_" + parent ;
+                          Variable v = new Variable(idScope, secondid) ;
+                          tempM.addVar(v);
+                          tempClass.addMethod(tempM);
+                          symbolTable.addClass(tempClass);
+                          
+                      }
+                  }
+                  else
+                  {
+                      error.add("Error in class " + className + "in method " + methodName
+                          + ". The variable " + id + " is already declared in this scope.") ;
+                  }
+              }
+          }
+          else if(inMethod)
+          {
+              Variable var = getVarIdInMethodNotInClass(parent, id, methodName) ;
+                 
+              if(var == null)
+              {
+                  Method tempM = symbolTable.getMethod(methodName) ;
+                  if(parent.equals(methodName))
+                  {
+                      Variable v = new Variable(id, secondid) ;
+                      tempM.addVar(v);
+                      symbolTable.addMethod(tempM);
+                  }
+                  else
+                  {
+                      String idScope = id + "_" + parent ;
+                      Variable v = new Variable(idScope, secondid) ;                    
+                      tempM.addVar(v);
+                      symbolTable.addMethod(tempM);
+
+                  }
+              }
+              else
+              {
+                  error.add("Error in method " + methodName
+                      + ". The variable " + id + " is already declared in this scope.") ;
+              }
+          }
+          */
     }
 
-    public void caseAIdvarlisttwoStmt(AIdvarlisttwoStmt node) {
+    public void caseAIdvarlisttwoStmt(AIdvarlisttwoStmt node) { //method call
+        String parent = myParent;
+
         node.getId().apply(this);
         node.getLparen().apply(this);
         node.getVarlisttwo().apply(this);
@@ -1519,9 +1562,123 @@ public class PrintTree extends DepthFirstAdapter {
         temp = id + lparen + varlisttwo + rparen + semicolon;
         stack.push(temp);
         temp = "";
+        /*
+        //error checking for methods
+        Method m = getMethodForMethodCall(id) ;
+        String[] varlistArr = varlisttwo.split(",");
+        if(m != null)
+        {
+            ArrayList<Variable> params = m.getAllParams() ;
+            if(varlistArr.length == params.size())
+            {
+                //check the types somehow
+                for(int i = 0; i < varlistArr.length ; i++)
+                {
+                    if(Character.isLetter(varlistArr[i].charAt(0)))
+                    {
+                        Variable v = null;
+                        if(inClass)
+                        {
+                            if(inMethod)
+                            {
+                                v = getVarIdInMethodInClass(parent, varlistArr[i], className, methodName) ;
+                                if(v == null)
+                                {
+                                    error.add("Error in method " + parent.replaceAll("\\d", "") + "."
+                                                        + " The variable " + varlistArr[i] + " has not been declared "
+                                                                        + "and cannot passed as a parameter.") ;
+                                }
+                                else
+                                {
+                                    if(!v.getType().equals(params.get(i).getType()))
+                                    {
+                                        error.add("Error in " + parent.replaceAll("\\d", "") 
+                                            + ". Parameter " + params.get(i).getName() + " of method " + id + " is expecting"
+                                                    + " type " + params.get(i).getType() + ". Variable " + v.getName() 
+                                                    + " is type " + v.getType()) ;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                v = getVarInClassNotInMethod(parent, id, className) ;
+                                if(v == null)
+                                {
+                                    error.add("Error in class " + className + "."
+                                                        + " The variable " + id + " has not been declared "
+                                                                        + "and cannot be passed as a parameter.") ;
+                                }
+                                else
+                                {
+                                    if(!v.getType().equals(params.get(i).getType()))
+                                    {
+                                        error.add("Error in " + parent.replaceAll("\\d", "") 
+                                            + ". Parameter " + params.get(i).getName() + " of method " + id + " is expecting"
+                                                    + " type " + params.get(i).getType() + ". Variable " + v.getName() 
+                                                    + " is type " + v.getType()) ;
+                                    }
+                                }
+                            }
+                        }
+                        else if(inMethod)
+                        {
+                            v = getVarIdInMethodNotInClass(parent, id, methodName) ;
+                            if(v == null)
+                            {
+                                error.add("Error in method " + methodName + "."
+                                                        + " The variable " + id + " has not been declared "
+                                                                        + "and cannot be passed as a parameter.") ;
+                            }
+                            else
+                            {
+                                if(!v.getType().equals(params.get(i).getType()))
+                                {
+                                    error.add("Error in " + parent.replaceAll("\\d", "") 
+                                        + ". Parameter " + params.get(i).getName() + " of method " + id + " is expecting"
+                                                + " type " + params.get(i).getType() + ". Variable " + v.getName() 
+                                                + " is type " + v.getType()) ;
+                                };
+                            }
+                        }
+                    }
+                    else if(params.get(i).getType().equals("STRING") || params.get(i).getType().equals("STRING_ARRAY"))
+                    {
+                        if(!varlistArr[i].contains("\""))
+                        {
+                            error.add("Error in " + parent.replaceAll("\\d", "")
+                            + ". Parameter " + i + " of method " + id + " is expecting"
+                                    + " type STRING.") ;
+                        }
+                    }
+                    else if(params.get(i).getType().equals("INT") || params.get(i).getType().equals("INT_ARRAY"))
+                    {
+                        if(varlistArr[i].contains("\"") || varlistArr[i].contains("."))
+                        {
+                            error.add("Error in " + parent.replaceAll("\\d", "")
+                            + ". Parameter " + i + " of method " + id + " is expecting"
+                                    + " type INT.") ;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " + id + 
+                        " is expecting " + params.size() + " arguments. Saw " +
+                        varlistArr.length + " arguments.") ;
+            }
+        }
+        else
+        {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". Method " +
+                    id + " cannot be found.") ;
+        }
+        */
     }
 
-    public void caseAMultiplevarlisttwoStmt(AMultiplevarlisttwoStmt node) {
+    public void caseAMultiplevarlisttwoStmt(AMultiplevarlisttwoStmt node) { //method call with object 
+        String parent = myParent;
+
         node.getFirstid().apply(this);
         node.getOptionalidarray().apply(this);
         node.getPeriod().apply(this);
@@ -1545,6 +1702,126 @@ public class PrintTree extends DepthFirstAdapter {
         temp = id + optionalid + period + secondid + lparen + varlisttwo + rparen + optlvarlisttwo + semicolon;
         stack.push(temp);
         temp = "";
+
+        //get the class of the method being called
+        /*     Classes methodClass = getMethodClassForMethodCall(secondid) ;
+             Variable var = getObjectForMethodCall(id, methodClass.getClassId()) ;
+             if(var == null)
+             {
+                 error.add("Error in " + parent.replaceAll("\\d", "") + ". The object " + id + " has"
+                         + "not been declared as type " + secondid + " and cannot make method call.") ;
+             }
+             
+              Method m = getMethodForMethodCall(id) ;
+             String[] varlistArr = varlisttwo.split(",");
+             if(m != null)
+             {
+                 ArrayList<Variable> params = m.getAllParams() ;
+                 if(varlistArr.length == params.size())
+                 {
+                     //check the types somehow
+                     for(int i = 0; i < varlistArr.length ; i++)
+                     {
+                         if(Character.isLetter(varlistArr[i].charAt(0)))
+                         {
+                             Variable v = null;
+                             if(inClass)
+                             {
+                                 if(inMethod)
+                                 {
+                                     v = getVarIdInMethodInClass(parent, varlistArr[i], className, methodName) ;
+                                     if(v == null)
+                                     {
+                                         error.add("Error in method " + parent.replaceAll("\\d", "") + "."
+                                                             + " The variable " + varlistArr[i] + " has not been declared "
+                                                                             + "and cannot passed as a parameter.") ;
+                                     }
+                                     else
+                                     {
+                                         if(!v.getType().equals(params.get(i).getType()))
+                                         {
+                                             error.add("Error in " + parent.replaceAll("\\d", "") 
+                                                 + ". Parameter " + params.get(i).getName() + " of method " + id + " is expecting"
+                                                         + " type " + params.get(i).getType() + ". Variable " + v.getName() 
+                                                         + " is type " + v.getType()) ;
+                                         }
+                                     }
+                                 }
+                                 else
+                                 {
+                                     v = getVarInClassNotInMethod(parent, id, className) ;
+                                     if(v == null)
+                                     {
+                                         error.add("Error in class " + className + "."
+                                                             + " The variable " + id + " has not been declared "
+                                                                             + "and cannot be passed as a parameter.") ;
+                                     }
+                                     else
+                                     {
+                                         if(!v.getType().equals(params.get(i).getType()))
+                                         {
+                                             error.add("Error in " + parent.replaceAll("\\d", "") 
+                                                 + ". Parameter " + params.get(i).getName() + " of method " + id + " is expecting"
+                                                         + " type " + params.get(i).getType() + ". Variable " + v.getName() 
+                                                         + " is type " + v.getType()) ;
+                                         }
+                                     }
+                                 }
+                             }
+                             else if(inMethod)
+                             {
+                                 v = getVarIdInMethodNotInClass(parent, id, methodName) ;
+                                 if(v == null)
+                                 {
+                                     error.add("Error in method " + methodName + "."
+                                                             + " The variable " + id + " has not been declared "
+                                                                             + "and cannot be passed as a parameter.") ;
+                                 }
+                                 else
+                                 {
+                                     if(!v.getType().equals(params.get(i).getType()))
+                                     {
+                                         error.add("Error in " + parent.replaceAll("\\d", "") 
+                                             + ". Parameter " + params.get(i).getName() + " of method " + id + " is expecting"
+                                                     + " type " + params.get(i).getType() + ". Variable " + v.getName() 
+                                                     + " is type " + v.getType()) ;
+                                     };
+                                 }
+                             }
+                         }
+                         else if(params.get(i).getType().equals("STRING") || params.get(i).getType().equals("STRING_ARRAY"))
+                         {
+                             if(!varlistArr[i].contains("\""))
+                             {
+                                 error.add("Error in " + parent.replaceAll("\\d", "")
+                                 + ". Parameter " + i + " of method " + id + " is expecting"
+                                         + " type STRING.") ;
+                             }
+                         }
+                         else if(params.get(i).getType().equals("INT") || params.get(i).getType().equals("INT_ARRAY"))
+                         {
+                             if(varlistArr[i].contains("\"") || varlistArr[i].contains("."))
+                             {
+                                 error.add("Error in " + parent.replaceAll("\\d", "")
+                                 + ". Parameter " + i + " of method " + id + " is expecting"
+                                         + " type INT.") ;
+                             }
+                         }
+                     }
+                 }
+                 else
+                 {
+                     error.add("Error in " + parent.replaceAll("\\d", "") + ". " + id + 
+                             " is expecting " + params.size() + " arguments. Saw " +
+                             varlistArr.length + " arguments.") ;
+                 }
+             }
+             else
+             {
+                 error.add("Error in " + parent.replaceAll("\\d", "") + ". Method " +
+                         id + " cannot be found.") ;
+             }
+             */
     }
 
     public void caseAReturnStmt(AReturnStmt node) {
@@ -1579,44 +1856,71 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable v ;
-        String type ;
+        Variable v = null;
+        String type = "";
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            } else {
+                Variable
+                var = getVarInClassNotInMethod(parent, id, className);
+                if (var == null) {
+                    error.add("Error in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            }
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be assigned a value.");
+            } else {
+                v =
+                    var;
+                type = v.getType();
+            }
+        }
         String idScope = getVarId(parent, id);
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL" ;
+        if (parent.equals("")) {
+            parent = "GLOBAL";
         }
-        if(idScope != null)
-        {
-            v = symbolTable.getVar(idScope);
-            type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type STRING and cannot be incremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type BOOLEAN and cannot be incremented.");
-            }
-            else if(type.contains("ARRAY"))
-            {
-                if(arr.equals(""))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is an array. Please specify the index.");
-                }
-                else if (type.equals("STRING_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is a STRING ARRAY and cannot be incremented.");
-                } else if (type.equals("BOOLEAN_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + id + " is a BOOLEAN ARRAY and cannot be incremented.");
-                }
-            }
-        }
-        else {
+
+        if (type.equals("STRING")) {
             error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                    "The variable " + id + " has not been declared and cannot be incremented.");
+                "The variable " + id + " is type STRING and cannot be incremented.");
+        } else if (type.equals("BOOLEAN")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type BOOLEAN and cannot be incremented.");
+        } else if (type.contains("ARRAY")) {
+            if (arr.equals("")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is an array. Please specify the index.");
+            } else if (type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is a STRING ARRAY and cannot be incremented.");
+            } else if (type.equals("BOOLEAN_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is a BOOLEAN ARRAY and cannot be incremented.");
+            }
         }
+
 
     }
 
@@ -1789,29 +2093,60 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable v ;
-        String type ;
-        String idScope = getVarId(parent, id) ;
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL" ;
-        }
-        if(idScope != null)
-        {
-            v = symbolTable.getVar(idScope);
-            type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type STRING and cannot be incremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type BOOLEAN and cannot be incremented.");
+        String type = "";
+        Variable v = null;
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            } else {
+                Variable
+                var = getVarInClassNotInMethod(parent, id, className);
+                if (var == null) {
+                    error.add("Error in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            }
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be incremented.");
+            } else {
+                v =
+                    var;
+                type = v.getType();
             }
         }
-        else {
-            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                    "The variable " + id + " has not been declared and cannot be incremented.");
+
+        if (parent.equals("")) {
+            parent = "GLOBAL";
         }
+
+        if (type.equals("STRING")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type STRING and cannot be incremented.");
+        } else if (type.equals("BOOLEAN")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type BOOLEAN and cannot be incremented.");
+        }
+
     }
 
     public void caseADecrementOrstmts(ADecrementOrstmts node) {
@@ -1827,28 +2162,57 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable v ;
-        String type ;
-        String idScope = getVarId(parent, id) ;
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL" ;
-        }
-        if(idScope != null)
-        {
-            v = symbolTable.getVar(idScope);
-            type = v.getType();
-            if (type.equals("STRING")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type STRING and cannot be decremented.");
-            } else if (type.equals("BOOLEAN")) {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + id + " is type BOOLEAN and cannot be decremented.");
+        String type = "";
+        Variable v = null;
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            } else {
+                Variable
+                var = getVarInClassNotInMethod(parent, id, className);
+                if (var == null) {
+                    error.add("Error in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be decremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            }
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be decremented.");
+            } else {
+                v =
+                    var;
+                type = v.getType();
             }
         }
-        else {
+        if (parent.equals("")) {
+            parent = "GLOBAL";
+        }
+
+        if (type.equals("STRING")) {
             error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                    "The variable " + id + " has not been declared and cannot be decremented.");
+                "The variable " + id + " is type STRING and cannot be decremented.");
+        } else if (type.equals("BOOLEAN")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type BOOLEAN and cannot be decremented.");
         }
     }
 
@@ -1866,54 +2230,74 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable v ;
-        String type ;
-        String idScope = getVarId(parent, id);
-        if(parent.equals(""))
-        {
-            parent = "GLOBAL" ;
+        String type = "";
+        Variable v = null;
+        if (inClass) {
+            if (inMethod) {
+                Variable
+                var = getVarIdInMethodInClass(parent, id, className, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + " in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            } else {
+                Variable
+                var = getVarInClassNotInMethod(parent, id, className);
+                if (var == null) {
+                    error.add("Error in class " + className + "." +
+                        " The variable " + id + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
+            }
+        } else if (inMethod) {
+            Variable
+            var = getVarIdInMethodNotInClass(parent, id, methodName);
+            if (var == null) {
+                error.add("Error in method " + methodName + "." +
+                    " The variable " + id + " has not been declared " +
+                    "and cannot be assigned a value.");
+            } else {
+                v =
+                    var;
+                type = v.getType();
+            }
         }
-        if(idScope != null)
-        {
-            v = symbolTable.getVar(idScope);
-            type = v.getType();
 
-            if(type.equals("INT"))
-            {
-                if(expr.contains("."))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type INT and cannot store a real numbers.") ;
-                }
-                if(expr.contains("\""))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type INT and cannot store a string literal.");
-                }
-            }
-            else if(type.equals("BOOLEAN"))
-            {
-                if(!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1"))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type BOOLEAN and can only store boolean values.") ;
-                }
-            }
-            else if(type.equals("STRING"))
-            {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                    + "The variable " + id + " is type STRING and can only store string literals.");
-            }
-            else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
-                if (expr.charAt(0) == '"') {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                            + "The variable " + id + " is type " + type + " and cannot store a string");
-                }
-            }
+        if (parent.equals("")) {
+            parent = "GLOBAL";
         }
-        else {
-            error.add("Error in " + parent.replaceAll("\\d", "") + ". "
-                + "The variable " + id + " is undeclared. A variable must be declared before it can be assigned a value.");
+
+        if (type.equals("INT")) {
+            if (expr.contains(".")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is type INT and cannot store a real numbers.");
+            }
+            if (expr.contains("\"")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is type INT and cannot store a string literal.");
+            }
+        } else if (type.equals("BOOLEAN")) {
+            if (!expr.equals("TRUE") || !expr.equals("FALSE") || !expr.equals("0") | !expr.equals("1")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is type BOOLEAN and can only store boolean values.");
+            }
+        } else if (type.equals("STRING")) {
+            error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                "The variable " + id + " is type STRING and can only store string literals.");
+        } else if (type.equals("INT") || type.equals("DOUBLE") || type.equals("BOOLEAN")) {
+            if (expr.charAt(0) == '"') {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + id + " is type " + type + " and cannot store a string");
+            }
         }
     }
 
@@ -2045,72 +2429,134 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable t ;
-        Variable e ;
-        String tType ;
-        String eType ;
+        Variable t;
+        Variable e;
+        String tType;
+        String eType;
 
-        if(termIsId)
-        {
+        if (termIsId) {
+            //need to deal with arrays
+            /*
             if(term.contains("["))
             {
                 term = term.replaceAll("[", "") ;
                 term = term.replaceAll("]", "") ;
-            }
+            } 
+*/
 
-            String tIdScope = getVarId(parent, term) ;
-            if(parent.equals("")){
-                parent = "GLOBAL" ;
-            }
-            if(tIdScope != null)
-            {
-                t = symbolTable.getVar(tIdScope) ;
-                tType = t.getType() ;
-                if(tType.equals("STRING") || tType.equals("STRING_ARRAY"))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + term + " is type STRING. Cannot complete arithmetic"
-                                + " addition with a string.") ;
+            String type = "";
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable
+                    var = getVarIdInMethodInClass(parent, term, className, methodName);
+                    if (var == null) {
+                        error.add("Error in method " + methodName + " in class " + className + "." +
+                            " The variable " + term + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                } else {
+                    Variable
+                    var = getVarInClassNotInMethod(parent, term, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + term + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, term, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + term + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
                 }
             }
-            else {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + term + " has not been declared."
-                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            if (parent.equals("")) {
+                parent = "GLOBAL";
             }
+
+            if (type.equals("STRING") || type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + term + " is type STRING. Cannot complete arithmetic" +
+                    " addition with a string.");
+            }
+
         }
 
-        if(exprIsId)
-        {
+        if (exprIsId) {
+            //need to deal with arrays
+            /*
             if(expr.contains("["))
             {
                 expr = expr.replaceAll("[", "") ;
                 expr = expr.replaceAll("]", "") ;
             }
-
-            String eIdScope = getVarId(parent, expr) ;
-            if(parent.equals(""))
-            {
-                parent = "GLOBAL" ;
-            }
-
-            if(eIdScope != null)
-            {
-                e = symbolTable.getVar(eIdScope) ;
-                eType = e.getType() ;
-                if(eType.equals("STRING") || eType.equals("STRING_ARRAY"))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                            "The variable " + expr + " is type STRING. Cannot complete arithmetic"
-                                    + " addition with a string.") ;
+*/
+            String type = "";
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable
+                    var = getVarIdInMethodInClass(parent, expr, className, methodName);
+                    if (var == null) {
+                        error.add("Error in method " + methodName + " in class " + className + "." +
+                            " The variable " + expr + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                } else {
+                    Variable
+                    var = getVarInClassNotInMethod(parent, expr, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + expr + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, expr, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + expr + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
                 }
             }
-            else
-            {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + expr + " has not been declared."
-                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            if (parent.equals("")) {
+                parent = "GLOBAL";
             }
+
+            if (type.equals("STRING") || type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + expr + " is type STRING. Cannot complete arithmetic" +
+                    " addition with a string.");
+            }
+
         }
     }
 
@@ -2137,71 +2583,124 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable t ;
-        Variable f ;
-        String tType ;
-        String fType ;
+        Variable t;
+        Variable f;
+        String tType;
+        String fType;
 
-        if(termIsId)
-        {
+        if (termIsId) {
+            //need to deal with arrays
+            /*
             if(term.contains("["))
             {
                 term = term.replaceAll("[", "") ;
                 term = term.replaceAll("]", "") ;
-            }
+            } 
+*/
 
-            String tIdScope = getVarId(parent, term) ;
-            if(parent.equals(""))
-            {
-                parent = "GLOBAL" ;
-            }
-            if(tIdScope != null)
-            {
-                t = symbolTable.getVar(tIdScope) ;
-                tType = t.getType() ;
-                if(tType.equals("STRING") || tType.equals("STRING_ARRAY"))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + term + " is type STRING. Cannot complete arithmetic"
-                                + " addition with a string.") ;
+            String type = "";
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable
+                    var = getVarIdInMethodInClass(parent, term, className, methodName);
+                    if (var == null) {
+                        error.add("Error in method " + methodName + " in class " + className + "." +
+                            " The variable " + term + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                } else {
+                    Variable
+                    var = getVarInClassNotInMethod(parent, term, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + term + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, term, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + term + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
                 }
             }
-            else {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + term + " has not been declared."
-                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            if (parent.equals("")) {
+                parent = "GLOBAL";
             }
+
+            if (type.equals("STRING") || type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + term + " is type STRING. Cannot complete arithmetic" +
+                    " addition with a string.");
+            }
+
         }
 
-        if(factorIsId)
-        {
-            if(factor.contains("["))
-            {
-                factor = factor.replaceAll("[", "") ;
-                factor = factor.replaceAll("]", "") ;
-            }
-
-            String fIdScope = getVarId(parent, factor) ;
-            if(parent.equals(""))
-            {
-                parent = "GLOBAL" ;
-            }
-            if(fIdScope != null)
-            {
-                f = symbolTable.getVar(fIdScope) ;
-                fType = f.getType() ;
-                if(fType.equals("STRING") || fType.equals("STRING_ARRAY"))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + factor + " is type STRING. Cannot complete arithmetic"
-                                + " addition with a string.") ;
+        if (factorIsId) {
+            String type = "";
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable
+                    var = getVarIdInMethodInClass(parent, factor, className, methodName);
+                    if (var == null) {
+                        error.add("Error in method " + methodName + " in class " + className + "." +
+                            " The variable " + factor + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                } else {
+                    Variable
+                    var = getVarInClassNotInMethod(parent, factor, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + factor + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, factor, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + factor + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
                 }
             }
-            else
-            {
+            if (parent.equals("")) {
+                parent = "GLOBAL";
+            }
+
+            if (type.equals("STRING") || type.equals("STRING_ARRAY")) {
                 error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + factor + " has not been declared."
-                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+                    "The variable " + factor + " is type STRING. Cannot complete arithmetic" +
+                    " addition with a string.");
             }
         }
     }
@@ -2227,26 +2726,49 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable e ;
-        if(exprIsId)
-        {
-            if(expr.contains("["))
-            {
-                expr = expr.replaceAll("[", "") ;
-                expr = expr.replaceAll("]", "") ;
+        Variable e;
+        if (exprIsId) {
+            if (expr.contains("[")) {
+                expr = expr.replaceAll("[", "");
+                expr = expr.replaceAll("]", "");
             }
 
-            String eIdScope = getVarId(parent, expr) ;
-            if(parent.equals(""))
-            {
-                parent = "GLOBAL" ;
-            }
-
-            if(eIdScope == null)
-            {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + expr + " has not been declared."
-                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable
+                    var = getVarIdInMethodInClass(parent, expr, className, methodName);
+                    if (var == null) {
+                        error.add("Error in method " + methodName + " in class " + className + "." +
+                            " The variable " + expr + " has not been declared " +
+                            "and cannot be assigned a value.");
+                    } else {
+                        v =
+                            var;
+                    }
+                } else {
+                    Variable
+                    var = getVarInClassNotInMethod(parent, expr, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + expr + " has not been declared " +
+                            "and cannot be assigned a value.");
+                    } else {
+                        v =
+                            var;
+                    }
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, expr, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + expr + " has not been declared " +
+                        "and cannot be assigned a value.");
+                } else {
+                    v =
+                        var;
+                }
             }
         }
     }
@@ -2266,37 +2788,64 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(temp);
         temp = "";
 
-        Variable f ;
-        String fType ;
-        if(factorIsId)
-        {
-            if(factor.contains("["))
-            {
-                factor = factor.replaceAll("[", "") ;
-                factor = factor.replaceAll("]", "") ;
+        Variable f;
+        String fType;
+        if (factorIsId) {
+            if (factor.contains("[")) {
+                factor = factor.replaceAll("[", "");
+                factor = factor.replaceAll("]", "");
             }
 
-            String fIdScope = getVarId(parent, factor) ;
-            if(parent.equals(""))
-            {
-                parent = "GLOBAL" ;
-            }
-            if(fIdScope != null)
-            {
-                f = symbolTable.getVar(fIdScope) ;
-                fType = f.getType() ;
-                if(fType.equals("STRING") || fType.equals("STRING_ARRAY"))
-                {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + factor + " is type STRING. Cannot negate a string.") ;
+            String type = "";
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable
+                    var = getVarIdInMethodInClass(parent, factor, className, methodName);
+                    if (var == null) {
+                        error.add("Error in method " + methodName + " in class " + className + "." +
+                            " The variable " + factor + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                } else {
+                    Variable
+                    var = getVarInClassNotInMethod(parent, factor, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + factor + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, factor, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + factor + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
                 }
             }
-            else
-            {
-                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + factor + " has not been declared."
-                                + " Cannot use an undeclared variable in arithmetic addition.") ;
+            if (parent.equals("")) {
+                parent = "GLOBAL";
             }
+
+            if (type.equals("STRING") || type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+                    "The variable " + factor + " is type STRING. Cannot negate a string.");
+            }
+
         }
     }
 
@@ -2365,7 +2914,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAIdArrayorid(AIdArrayorid node) {
-        isId = true ;
+        isId = true;
         node.getId().apply(this);
     }
 
@@ -2374,7 +2923,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAArrayOptionalidarray(AArrayOptionalidarray node) {
-        isId = true ;
+        isId = true;
         node.getLsquare().apply(this);
         node.getNumber().apply(this);
         node.getRsquare().apply(this);
@@ -2433,65 +2982,51 @@ public class PrintTree extends DepthFirstAdapter {
         String firstExpType = "";
         String secondExpType = "";
 
-        if(firstExprIsId)
-        {
-            if(firstexpr.contains("["))
-            {
-                firstexpr = firstexpr.replaceAll("[", "") ;
-                firstexpr = firstexpr.replaceAll("]", "") ;
+        if (firstExprIsId) {
+            if (firstexpr.contains("[")) {
+                firstexpr = firstexpr.replaceAll("[", "");
+                firstexpr = firstexpr.replaceAll("]", "");
             }
 
-            String firstExprIdScope = getVarId(parent, firstexpr) ;
-            if(parent.equals(""))
-            {
-                parent = "GLOBAL" ;
+            String firstExprIdScope = getVarId(parent, firstexpr);
+            if (parent.equals("")) {
+                parent = "GLOBAL";
             }
-            if(firstExprIdScope != null)
-            {
-                firstExpVar = symbolTable.getVar(firstExprIdScope) ;
-                firstExpType = firstExpVar.getType() ;
-                if(firstExpType.equals("STRING") || firstExpType.equals("STRING_ARRAY"))
-                {
+            if (firstExprIdScope != null) {
+                firstExpVar = symbolTable.getVar(firstExprIdScope);
+                firstExpType = firstExpVar.getType();
+                if (firstExpType.equals("STRING") || firstExpType.equals("STRING_ARRAY")) {
                     error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + firstexpr + " is type STRING. Cannot use a string in a conditional expression.") ;
+                        "The variable " + firstexpr + " is type STRING. Cannot use a string in a conditional expression.");
                 }
-            }
-            else
-            {
+            } else {
                 error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + firstexpr + " has not been declared."
-                                + " Cannot use an undeclared variable in a conditional expression.") ;
+                    "The variable " + firstexpr + " has not been declared." +
+                    " Cannot use an undeclared variable in a conditional expression.");
             }
         }
 
-        if(secondExprIsId)
-        {
-            if(secondexpr.contains("["))
-            {
-                secondexpr = secondexpr.replaceAll("[", "") ;
-                secondexpr = secondexpr.replaceAll("]", "") ;
+        if (secondExprIsId) {
+            if (secondexpr.contains("[")) {
+                secondexpr = secondexpr.replaceAll("[", "");
+                secondexpr = secondexpr.replaceAll("]", "");
             }
 
-            String secondExprIdScope = getVarId(parent, secondexpr) ;
-            if(parent.equals(""))
-            {
-                parent = "GLOBAL" ;
+            String secondExprIdScope = getVarId(parent, secondexpr);
+            if (parent.equals("")) {
+                parent = "GLOBAL";
             }
-            if(secondExprIdScope != null)
-            {
-                secondExpVar = symbolTable.getVar(secondExprIdScope) ;
-                secondExpType = secondExpVar.getType() ;
-                if(secondExpType.equals("STRING") || secondExpType.equals("STRING_ARRAY"))
-                {
+            if (secondExprIdScope != null) {
+                secondExpVar = symbolTable.getVar(secondExprIdScope);
+                secondExpType = secondExpVar.getType();
+                if (secondExpType.equals("STRING") || secondExpType.equals("STRING_ARRAY")) {
                     error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + secondexpr + " is type STRING. Cannot use a string in a conditional expression.") ;
+                        "The variable " + secondexpr + " is type STRING. Cannot use a string in a conditional expression.");
                 }
-            }
-            else
-            {
+            } else {
                 error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
-                        "The variable " + secondexpr + " has not been declared."
-                                + " Cannot use an undeclared variable in a conditional expression.") ;
+                    "The variable " + secondexpr + " has not been declared." +
+                    " Cannot use an undeclared variable in a conditional expression.");
             }
         }
 
@@ -2704,7 +3239,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseTId(TId node) {
-        isId = true ;
+        isId = true;
         stack.push(node.getText());
     }
 
@@ -2773,269 +3308,297 @@ public class PrintTree extends DepthFirstAdapter {
         stack.push(node.getText());
     }
 
-    public static String getVarId(String parent, String id){
-        String idScope ;
+    public static String getVarId(String parent, String id) {
+        String idScope;
         int pIndex = 0;
 
-        while(!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1){
+        while (!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1) {
             pIndex++;
         }
 
         idScope = id + "_" + parentArr.get(pIndex);
-        while(!symbolTable.containsVar(idScope) && pIndex < parentArr.size() - 1){
-            pIndex++ ;
+        while (!symbolTable.containsVar(idScope) && pIndex < parentArr.size() - 1) {
+            pIndex++;
             idScope = id + "_" + parentArr.get(pIndex);
         }
 
-        if(pIndex >= parentArr.size())
-        {
-            if(!symbolTable.containsVar(id))
-            {
-                return "" ;
-            }
-            else
-            {
+        if (pIndex >= parentArr.size()) {
+            if (!symbolTable.containsVar(id)) {
+                return "";
+            } else {
                 Variable v = symbolTable.getVar(id);
-                return v.getName() ;
+                return v.getName();
             }
-        }
-        else
-        {
-            if(!symbolTable.containsVar(idScope))
-            {
-                if(!symbolTable.containsVar(id)){
-                    return "" ;
-                }
-                else
-                {
+        } else {
+            if (!symbolTable.containsVar(idScope)) {
+                if (!symbolTable.containsVar(id)) {
+                    return "";
+                } else {
                     Variable v = symbolTable.getVar(id);
                     return v.getName();
                 }
-            }
-            else {
+            } else {
                 Variable v = symbolTable.getVar(idScope);
-                return v.getName() ;
+                return v.getName();
             }
         }
     }
-    
-    public static Variable getVarIdInMethodInClass(String parent, String id, String varClassName, String varMethodName){
-        String idScope ;
+
+    public static Variable getVarIdInMethodInClass(String parent, String id, String varClassName, String varMethodName) {
+        String idScope;
         int pIndex = 0;
 
-        if(!parent.equals(varMethodName) && !parent.equals(varClassName))
-        {
-            while(!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1){
+        if (!parent.equals(varClassName)) {
+            while (!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1) {
                 pIndex++;
-            }   
-            
-            Classes tempClass = symbolTable.getMyClass(varClassName) ;
-            Method tempMethod = tempClass.getMethod(varMethodName) ;
-            HashMap <String, Variable> methodVariables = tempMethod.getAllVars() ;
-            idScope = id + "_" + parent ;
-            
-            while(!methodVariables.containsKey(idScope) && pIndex < parentArr.size() - 1){
-                pIndex++ ;
-                idScope = id + "_" + parentArr.get(pIndex);
             }
             
-            if(pIndex >= parentArr.size())
-            {   //check for local var declaration in method 
-                if(!methodVariables.containsKey(id))
-                {
-                    return null ;
-                }
-                else
-                {
+            Classes tempClass = symbolTable.getMyClass(varClassName);
+       
+            Method tempMethod = tempClass.getMethod(varMethodName);
+
+            HashMap < String, Variable > methodVariables = tempMethod.getAllVars();
+            idScope = id + "_" + parent;
+
+            while (!methodVariables.containsKey(idScope) && pIndex < parentArr.size() - 1) {
+                pIndex++;
+                idScope = id + "_" + parentArr.get(pIndex);
+            }
+
+            if (pIndex >= parentArr.size() - 1) { //check for local var declaration in method 
+                if (!methodVariables.containsKey(id)) {
+                    //check paramters 
+                    ArrayList < Variable > params = tempMethod.getAllParams();
+                    for (int i = 0; i < params.size(); i++) {
+                        Variable tempParam = params.get(i);
+                        if (tempParam.getName().equals(id)) {
+                            return tempParam;
+                        }
+                    }
+                    return null;
+                } else {
                     Variable v = methodVariables.get(id);
                     return v;
                 }
-            }
-            else
-            {   //check case when method uses global var
-                if(!symbolTable.containsVar(id)){
-                    return null ;
-                }
-                else
-                {
+            } else if (tempMethod.containsVar(idScope)) {
+                return tempMethod.getVar(idScope);
+            } else if (tempClass.containsVar(id)) {
+                return tempClass.getVar(id);
+            } else { //check case when method uses global var
+                if (!symbolTable.containsVar(id)) {
+                    return null;
+                } else {
                     Variable v = symbolTable.getVar(id);
                     return v;
                 }
             }
-        }
-        else if (!parent.equals(varClassName) && parent.equals(varMethodName))
-        {
-            Classes tempClass = symbolTable.getMyClass(varClassName) ;
-            Method tempMethod = tempClass.getMethod(varMethodName) ;            
-            if(!tempMethod.containsVar(id))
-            {
-                if(!symbolTable.containsVar(id)){
-                    return null ;
+        } else {
+            Classes tempClass = symbolTable.getMyClass(varClassName);
+            Method tempMethod = tempClass.getMethod(varMethodName);
+            if (!tempMethod.containsVar(id)) {
+                ArrayList < Variable > params = tempMethod.getAllParams();
+                for (int i = 0; i < params.size(); i++) {
+                    Variable tempParam = params.get(i);
+                    if (tempParam.getName().equals(id)) {
+                        return tempParam;
+                    }
+                }
+                if(!tempClass.containsVar(id))
+                {
+                    if (!symbolTable.containsVar(id)) {
+                        return null;
+                    } else {
+                        Variable v = symbolTable.getVar(id);
+                        return v;
+                    }
                 }
                 else
                 {
-                    Variable v = symbolTable.getVar(id);
-                    return v;
+                    return tempClass.getVar(id) ;
                 }
-            }
-            else
-            {
-                Variable v = tempMethod.getVar(id) ;
-                return v;
-            }
-        }
-        else if(!parent.equals(varMethodName) && parent.equals(varClassName))
-        {
-            Classes tempClass = symbolTable.getMyClass(varClassName) ;
-            if(tempClass.containsVar(id))
-            {
-                return tempClass.getVar(id) ;
-            }
-        }
-        else 
-        {
-            if(!symbolTable.containsVar(id)){
-                return null ;
-            }
-            else
-            {
-                Variable v = symbolTable.getVar(id);
-                return v;
-            }
-        }
-        
-        return null ;
-    } 
-    
-    public static Variable getVarIdInMethodNotInClass(String parent, String id, String varMethodName){
-        String idScope ;
-        int pIndex = 0;
-
-        if(!parent.equals(varMethodName))
-        {
-            while(!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1){
-                pIndex++;
-            }   
-            
-            Method tempMethod = symbolTable.getMethod(varMethodName) ;
-            HashMap <String, Variable> methodVariables = tempMethod.getAllVars() ;
-            idScope = id + "_" + parent ;
-            
-            while(!methodVariables.containsKey(idScope) && pIndex < parentArr.size() - 1){
-                pIndex++ ;
-                idScope = id + "_" + parentArr.get(pIndex);
-            }
-            
-            if(pIndex >= parentArr.size())
-            {   //check for local var declaration in method 
-                if(!methodVariables.containsKey(id))
-                {
-                    return null ;
-                }
-                else
-                {
-                    Variable v = methodVariables.get(id);
-                    return v ;
-                }
-            }
-            else
-            {   //check case when method uses global var
-                if(!symbolTable.containsVar(id)){
-                    return null ;
-                }
-                else
-                {
-                    Variable v = symbolTable.getVar(id);
-                    return v;
-                }
-            }
-        }
-        else
-        {
-            Method tempMethod = symbolTable.getMethod(varMethodName) ;
-            HashMap <String, Variable> methodVariables = tempMethod.getAllVars() ;      
-            if(!tempMethod.containsVar(id))
-            {
-                if(!symbolTable.containsVar(id)){
-                    return null ;
-                }
-                else
-                {
-                    Variable v = symbolTable.getVar(id);
-                    return v;
-                }
-            }
-            else
-            {
+            } else {
                 Variable v = tempMethod.getVar(id);
-                return v ;
+                return v;
             }
         }
-    } 
-    
-    public static Variable getVarInClassNotInMethod(String parent, String id, String varClassName){
-        String idScope ;
+    }
+
+    public static Variable getVarIdInMethodNotInClass(String parent, String id, String varMethodName) {
+        String idScope;
         int pIndex = 0;
 
-        if(!parent.equals(varClassName))
-        {
-            while(!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1){
+        if (!parent.equals(varMethodName)) {
+            while (!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1) {
                 pIndex++;
-            }   
-            
-            Classes c = symbolTable.getMyClass(varClassName) ;
-            idScope = id + "_" + parent ;
-            
-            while(!c.containsVar(idScope) && pIndex < parentArr.size() - 1){
-                pIndex++ ;
+            }
+
+            Method tempMethod = symbolTable.getMethod(varMethodName);
+            HashMap < String, Variable > methodVariables = tempMethod.getAllVars();
+            idScope = id + "_" + parent;
+
+            while (!methodVariables.containsKey(idScope) && pIndex < parentArr.size() - 1) {
+                pIndex++;
                 idScope = id + "_" + parentArr.get(pIndex);
             }
-            
-            if(pIndex >= parentArr.size())
-            {   //check for local var declaration in method 
-                if(!c.containsVar(id))
-                {
-                    return null ;
+
+            if (pIndex >= parentArr.size()) { //check for local var declaration in method 
+                if (!methodVariables.containsKey(id)) {
+                    ArrayList < Variable > params = tempMethod.getAllParams();
+                    for (int i = 0; i < params.size(); i++) {
+                        Variable tempParam = params.get(i);
+                        if (tempParam.getName().equals(id)) {
+                            return tempParam;
+                        }
+                    }
+                    return null;
+                } else {
+                    Variable v = methodVariables.get(id);
+                    return v;
                 }
-                else
-                {
+            }
+            else if (tempMethod.containsVar(idScope)) {
+                return tempMethod.getVar(idScope);
+            }
+            else { //check case when method uses global var
+                if (!symbolTable.containsVar(id)) {
+                    return null;
+                } else {
+                    Variable v = symbolTable.getVar(id);
+                    return v;
+                }
+            }
+        } else {
+            Method tempMethod = symbolTable.getMethod(varMethodName);
+            // HashMap <String, Variable> methodVariables = tempMethod.getAllVars() ;      
+            if (!tempMethod.containsVar(id)) {
+                if (!symbolTable.containsVar(id)) {
+                    return null;
+                } else {
+                    Variable v = symbolTable.getVar(id);
+                    return v;
+                }
+            } else {
+                Variable v = tempMethod.getVar(id);
+                return v;
+            }
+        }
+    }
+
+    public static Variable getVarInClassNotInMethod(String parent, String id, String varClassName) {
+        String idScope;
+        int pIndex = 0;
+
+        if (!parent.equals(varClassName)) {
+            while (!parentArr.get(pIndex).equals(parent) && pIndex < parentArr.size() - 1) {
+                pIndex++;
+            }
+
+            Classes c = symbolTable.getMyClass(varClassName);
+            idScope = id + "_" + parent;
+
+            while (!c.containsVar(idScope) && pIndex < parentArr.size() - 1) {
+                pIndex++;
+                idScope = id + "_" + parentArr.get(pIndex);
+            }
+
+            if (pIndex >= parentArr.size()) { //check for local var declaration in method 
+                if (!c.containsVar(id)) {
+                    return null;
+                } else {
                     Variable v = c.getVar(id);
-                    return v ;
+                    return v;
                 }
-            }
-            else
-            {   //check case when method uses global var
-                if(!symbolTable.containsVar(id)){
-                    return null ;
-                }
-                else
-                {
+            } else { //check case when method uses global var
+                if (!symbolTable.containsVar(id)) {
+                    return null;
+                } else {
                     Variable v = symbolTable.getVar(id);
                     return v;
                 }
             }
-        }
-        else
-        {
-            Classes c = symbolTable.getMyClass(varClassName) ; 
-            if(!c.containsVar(id))
-            {
-                if(!symbolTable.containsVar(id)){
-                    return null ;
-                }
-                else
-                {
+        } else {
+            Classes c = symbolTable.getMyClass(varClassName);
+            if (!c.containsVar(id)) {
+                if (!symbolTable.containsVar(id)) {
+                    return null;
+                } else {
                     Variable v = symbolTable.getVar(id);
                     return v;
                 }
-            }
-            else
-            {
+            } else {
                 Variable v = c.getVar(id);
-                return v ;
+                return v;
             }
         }
-    } 
-    
+    }
+
+
+    public static Method getMethodForMethodCall(String id) {
+        if (symbolTable.containsMethod(id)) {
+            return symbolTable.getMethod(id);
+        } else {
+            HashMap < String, Classes > classes = symbolTable.getAllClasses();
+            Set < String > keySet = classes.keySet();
+            for (String k: keySet) {
+                Classes c = symbolTable.getMyClass(k);
+                if (c.containsMethod(id)) {
+                    return c.getMethod(id);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static Classes getMethodClassForMethodCall(String id) {
+        HashMap < String, Classes > classes = symbolTable.getAllClasses();
+        Set < String > keySet = classes.keySet();
+        for (String k: keySet) {
+            Classes c = symbolTable.getMyClass(k);
+            if (c.containsMethod(id)) {
+                return c;
+            }
+        }
+
+        return null;
+    }
+
+    public static Variable getObjectForMethodCall(String varId, String type) {
+
+        if (symbolTable.containsVar(varId)) {
+            Variable v = symbolTable.getVar(varId);
+            if (v.getType().equals(type)) {
+                return v;
+            }
+        } else {
+            HashMap < String, Classes > classes = symbolTable.getAllClasses();
+            Set < String > keySet = classes.keySet();
+            for (String k: keySet) {
+                Classes c = symbolTable.getMyClass(k);
+                if (c.containsVar(varId)) {
+                    Variable v = c.getVar(varId);
+                    if (v.getType().equals(type)) {
+                        return v;
+                    }
+                } else {
+                    HashMap < String, Method > methods = c.getAllMethods();
+                    Set < String > mKeys = methods.keySet();
+                    for (String m: mKeys) {
+                        Method tempMethod = c.getMethod(m);
+                        if (tempMethod.containsVar(varId)) {
+                            Variable v = tempMethod.getVar(varId);
+                            if (v.getType().equals(type)) {
+                                return v;
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+
+
+        return null;
+    }
 
 }
