@@ -64,7 +64,7 @@ public class SecondPass extends DepthFirstAdapter {
 		node.getEnd().apply(this);
                 
                 //add the variables from the symbol table to the .data section
-                HashMap m = symbolTable.getVarTable() ;
+                HashMap m = symbolTable.getAllVars() ;
                 Set<String> keys = m.keySet() ;
                 Variable v ;
                 String type ;
@@ -520,6 +520,13 @@ public class SecondPass extends DepthFirstAdapter {
             
             node.getId().apply(this);	
             node.getOptionalidarray().apply(this);
+            String dex = stack.peek() ;
+            int index = 0 ;
+            if(!dex.equals(""))
+            {
+                dex = dex.substring(1 , dex.length()-1) ;
+                index = Integer.parseInt(dex) ;
+            }
             node.getAssignment().apply(this);
             node.getExpr().apply(this);
             //In getExpr we generate proper code
@@ -536,11 +543,29 @@ public class SecondPass extends DepthFirstAdapter {
             //id to check for scope
             String idScope = PrintTree.getVarId(parent, id);
             
-            if(symbolTable.containsVar(idScope)){
-                codePart = codePart + "move $t0 , $s" + lastOutReg + "\nsw $t0 , " + idScope + "\n" ;
+            if(symbolTable.containsVar(idScope))
+            {
+                if(index == 0)
+                {
+                    codePart = codePart + "move $t0 , $s" + lastOutReg + "\nsw $t0 , " + idScope + "\n" ;
+                }
+                else
+                {
+                    codePart = codePart + "la $t0 , " + idScope + "\n" ;
+                    codePart = codePart + "sw $s" + lastOutReg + " , " + index * 4 + "($t0) \n" ;
+                }
             }
-            else {
-                codePart = codePart + "move $t0 , $s" + lastOutReg + "\nsw $t0 , " + id + "\n" ;
+            else 
+            {
+                if(index == 0)
+                {
+                    codePart = codePart + "move $t0 , $s" + lastOutReg + "\nsw $t0 , " + id + "\n" ;
+                }
+                else
+                {
+                    codePart = codePart + "la $t0 , " + id + "\n" ;
+                    codePart = codePart + "sw $s" + lastOutReg + " , " + index * 4 + "($t0) \n" ;
+                }
             }
 
             temp = id + arr + assignment + expr + semicolon ;
@@ -798,6 +823,13 @@ public class SecondPass extends DepthFirstAdapter {
             
             node.getId().apply(this);
             node.getOptionalidarray().apply(this);
+            String dex = stack.peek() ;
+            int index = 0 ;
+            if(!dex.equals(""))
+            {
+                dex = dex.substring(1 , dex.length()-1) ;
+                index = Integer.parseInt(dex) ;
+            }
             node.getAssignment().apply(this);
             node.getGet().apply(this);
             node.getLparen().apply(this);
@@ -821,14 +853,30 @@ public class SecondPass extends DepthFirstAdapter {
                 //read int
                 codePart = codePart + "li $v0 , 5 \n" ;
                 codePart = codePart + "syscall \n" ;
-                codePart = codePart + "sw $v0 , " + idScope + "\n" ;
+                if(index == 0)
+                {
+                    codePart = codePart + "sw $v0 , " + idScope + "\n" ;
+                }
+                else
+                {
+                    codePart = codePart + "la $t8 , " + idScope + "\n" ;
+                    codePart = codePart + "sw $v0 , " + index * 4 + "($t8) \n" ;
+                }
             }
             else if(type.equals("REAL"))
             {
                 //read double
                 codePart = codePart + "li $v0 , 7 \n" ;
                 codePart = codePart + "syscall \n" ;
-                codePart = codePart + "sw $f0 , " + idScope + "\n" ;
+                if(index == 0)
+                {
+                    codePart = codePart + "sw $f0 , " + idScope + "\n" ;
+                }
+                else
+                {
+                    codePart = codePart + "la $t8 , " + idScope + "\n" ;
+                    codePart = codePart + "sw $v0 , " + index * 8 + "($t8) \n" ;
+                }
             }
 
             temp = id + arr + assignment + get + lparen + rparen + semicolon ;
@@ -843,6 +891,13 @@ public class SecondPass extends DepthFirstAdapter {
             node.getLparen().apply(this);
             node.getId().apply(this);
             node.getOptionalidarray().apply(this);
+            String dex = stack.peek() ;
+            int index = 0 ;
+            if(!dex.equals(""))
+            {
+                dex = dex.substring(1 , dex.length()-1) ;
+                index = Integer.parseInt(dex) ;
+            }
             node.getRparen().apply(this);
             node.getSemicolon().apply(this);
 
@@ -895,8 +950,43 @@ public class SecondPass extends DepthFirstAdapter {
             }
             else if(type.equals("BOOLEAN"))
             {
+                codePart = codePart + "lw $t" + varReg + " , " + idScope + "\n" ;
+                codePart = codePart + "move $a0 , $t" + varReg + "\n" ; 
                 //print integer
                 codePart = codePart + "li $v0 , 1 \n" ;
+                codePart = codePart + "syscall \n" ;
+                codePart = codePart + "la $a0 , newLine \n" ;
+                codePart = codePart + "li $v0 , 4 \n" ;
+                codePart = codePart + "syscall \n" ;
+            }
+            else if(type.equals("INT_ARRAY") || type.equals("BOOLEAN_ARRAY"))
+            {
+                codePart = codePart + "la $t" + varReg + " , " + idScope + "\n" ;
+                codePart = codePart + "lw $a0 , " + (index * 4) + "($t" + varReg +") \n" ;
+                
+                codePart = codePart + "li $v0 , 1 \n" ;
+                codePart = codePart + "syscall \n" ;
+                codePart = codePart + "la $a0 , newLine \n" ;
+                codePart = codePart + "li $v0 , 4 \n" ;
+                codePart = codePart + "syscall \n" ;
+            }
+            else if(type.equals("REAL_ARRAY"))
+            {
+                codePart = codePart + "la $t" + varReg + " , " + idScope + "\n" ;
+                codePart = codePart + "lw $a0 , " + (index * 4) + "($t" + varReg +") \n" ;
+                //print double
+                codePart = codePart + "li $v0 , 3 \n" ;
+                codePart = codePart + "syscall \n" ;
+                codePart = codePart + "la $a0 , newLine \n" ;
+                codePart = codePart + "li $v0 , 4 \n" ;
+                codePart = codePart + "syscall \n" ;
+            }
+            else if(type.equals("STRING_ARRAY"))
+            {
+                codePart = codePart + "la $t" + varReg + " , " + idScope + "\n" ;
+                codePart = codePart + "lw $a0 , " + (index * 4) + "($t" + varReg +") \n" ;
+                //print string
+                codePart = codePart + "li $v0 , 4 \n" ;
                 codePart = codePart + "syscall \n" ;
                 codePart = codePart + "la $a0 , newLine \n" ;
                 codePart = codePart + "li $v0 , 4 \n" ;
@@ -914,6 +1004,13 @@ public class SecondPass extends DepthFirstAdapter {
             String parent = myParent ;
             node.getId().apply(this);
             node.getOptionalidarray().apply(this);
+            String dex = stack.peek() ;
+            int index = 0 ;
+            if(!dex.equals(""))
+            {
+                dex = dex.substring(1 , dex.length()-1) ;
+                index = Integer.parseInt(dex) ;
+            }
             node.getIncrement().apply(this);
             node.getSemicolon().apply(this);
 
@@ -932,10 +1029,20 @@ public class SecondPass extends DepthFirstAdapter {
             lastInReg = getOpenInReg(lastInReg) ;
             lastOutReg = getOpenOutReg(lastOutReg) ;
 
-            codePart = codePart + "lw $t" + lastInReg + " , " + idScope + "\n" ;
-            codePart = codePart + "addi $s" + lastOutReg + " , $t" + lastInReg + " , 1 \n" ;
-            codePart = codePart + "sw $s" + lastOutReg + " , " + idScope + "\n" ;
-
+            if(index == 0)
+            {
+                codePart = codePart + "lw $t" + lastInReg + " , " + idScope + "\n" ;
+                codePart = codePart + "addi $s" + lastOutReg + " , $t" + lastInReg + " , 1 \n" ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + idScope + "\n" ;
+            }
+            else
+            {
+                codePart = codePart + "la $t" + lastInReg + " , " + idScope + "\n" ;
+                codePart = codePart + "lw $s" + lastOutReg + " , " + index * 4 + "($t" + lastInReg + ")\n" ;
+                codePart = codePart + "addi $s" + lastOutReg + " , $s" + lastOutReg + " , 1 \n" ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + index * 4 + "($t" + lastInReg +")\n" ;
+            }
+            
             freeInReg(lastInReg) ;
             freeOutReg(lastOutReg) ;       
 	}
@@ -944,6 +1051,13 @@ public class SecondPass extends DepthFirstAdapter {
             String parent = myParent ;
             node.getId().apply(this);
             node.getOptionalidarray().apply(this);
+            String dex = stack.peek() ;
+            int index = 0 ;
+            if(!dex.equals(""))
+            {
+                dex = dex.substring(1 , dex.length()-1) ;
+                index = Integer.parseInt(dex) ;
+            }
             node.getDecrement().apply(this);
             node.getSemicolon().apply(this);
 
@@ -962,9 +1076,19 @@ public class SecondPass extends DepthFirstAdapter {
             lastInReg = getOpenInReg(lastInReg) ;
             lastOutReg = getOpenOutReg(lastOutReg) ;
 
-            codePart = codePart + "lw $t" + lastInReg + " , " + idScope + "\n" ;
-            codePart = codePart + "subi $s" + lastOutReg + " , $t" + lastInReg + " , 1 \n" ;
-            codePart = codePart + "sw $s" + lastOutReg + " , " + idScope + "\n" ;
+            if(index == 0)
+            {
+                codePart = codePart + "lw $t" + lastInReg + " , " + idScope + "\n" ;
+                codePart = codePart + "subi $s" + lastOutReg + " , $t" + lastInReg + " , 1 \n" ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + idScope + "\n" ;
+            }
+            else
+            {
+                codePart = codePart + "la $t" + lastInReg + " , " + idScope + "\n" ;
+                codePart = codePart + "lw $s" + lastOutReg + " , " + index * 4 + "($t" + lastInReg + ")\n" ;
+                codePart = codePart + "subi $s" + lastOutReg + " , $s" + lastOutReg + " , 1 \n" ;
+                codePart = codePart + "sw $s" + lastOutReg + " , " + index * 4 + "($t" + lastInReg +")\n" ;                
+            }
 
             freeInReg(lastInReg) ;
             freeOutReg(lastOutReg) ;      
@@ -2164,6 +2288,19 @@ public class SecondPass extends DepthFirstAdapter {
         else if(type.equals("STRING"))
         {
             dataPart = dataPart + name + ": .asciiz \n.align 2 \n" ;
+        }
+        else if(type.contains("ARRAY"))
+        {
+            Variable v = symbolTable.getVar(name) ;
+            int index = v.getIndex() ;
+            if(type.contains("REAL"))
+            {
+                index *= 2 ;
+            }
+            
+            index *= 4 ; 
+            
+            dataPart = dataPart + name + ".space " + index + "\n" ;
         }
         else
         {
