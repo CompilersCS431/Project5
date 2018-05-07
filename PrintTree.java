@@ -56,7 +56,7 @@ public class PrintTree extends DepthFirstAdapter {
         inClass = true;
         node.getTclass().apply(this);
         node.getId().apply(this);
-
+        isId = false ;
         //add class to symbol table
         String peekId = stack.peek();
         Classes c = new Classes(peekId);
@@ -104,6 +104,7 @@ public class PrintTree extends DepthFirstAdapter {
         node.getType().apply(this);
         String peekType = stack.peek();
         node.getId().apply(this);
+        isId = false ;
         methodName = stack.peek();
 
         String tempPrevParent = prevParent;
@@ -148,16 +149,7 @@ public class PrintTree extends DepthFirstAdapter {
                 m.addParam(v);
             }
         }
-
-        //error checking that the type matches the return type 
-        if (type.equals("VOID")) {
-            if (stmtseq.contains("RETURN")) {
-                error.add("Error in " + id + ". Void method cannot return value;");
-            }
-        } else {
-            //check for other return statements 
-        }
-
+        
         //update the method in the method table with the parameters
         symbolTable.addMethod(m);
 
@@ -176,6 +168,7 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAIdlisttypeClassmethodstmt(AIdlisttypeClassmethodstmt node) { //global var declarations
         node.getId().apply(this);
+        isId = false ;
         node.getOptlidlist().apply(this);
         node.getColon().apply(this);
         node.getType().apply(this);
@@ -231,6 +224,7 @@ public class PrintTree extends DepthFirstAdapter {
         node.getType().apply(this);
         String peekType = stack.peek();
         node.getId().apply(this);
+        isId = false ;
 
         String peekId = stack.peek();
         myParent = peekId;
@@ -294,6 +288,7 @@ public class PrintTree extends DepthFirstAdapter {
         Classes c = symbolTable.getMyClass(className);
 
         node.getId().apply(this);
+        isId = false ;
         node.getOptlidlist().apply(this);
         node.getColon().apply(this);
         node.getType().apply(this);
@@ -337,6 +332,7 @@ public class PrintTree extends DepthFirstAdapter {
         Classes c = symbolTable.getMyClass(className);
 
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
         node.getAnychars().apply(this);
@@ -384,6 +380,7 @@ public class PrintTree extends DepthFirstAdapter {
         node.getPut().apply(this);
         node.getLparen().apply(this);
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getRparen().apply(this);
         node.getSemicolon().apply(this);
@@ -409,6 +406,7 @@ public class PrintTree extends DepthFirstAdapter {
         Classes c = symbolTable.getMyClass(className);
 
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
         node.getGet().apply(this);
@@ -438,6 +436,7 @@ public class PrintTree extends DepthFirstAdapter {
 
         String parent = myParent;
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getIncrement().apply(this);
         node.getSemicolon().apply(this);
@@ -471,6 +470,7 @@ public class PrintTree extends DepthFirstAdapter {
 
         String parent = myParent;
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getDecrement().apply(this);
         node.getSemicolon().apply(this);
@@ -540,6 +540,7 @@ public class PrintTree extends DepthFirstAdapter {
         Classes c = symbolTable.getMyClass(className);
 
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
         node.getBoolean().apply(this);
@@ -587,6 +588,7 @@ public class PrintTree extends DepthFirstAdapter {
         String parent = myParent;
 
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
         node.getExpr().apply(this);
@@ -711,6 +713,7 @@ public class PrintTree extends DepthFirstAdapter {
         String parent = myParent;
 
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
         node.getAnychars().apply(this);
@@ -787,6 +790,7 @@ public class PrintTree extends DepthFirstAdapter {
         String parent = myParent;
 
         node.getId().apply(this);
+        isId = false ;
         node.getOptlidlist().apply(this);
         node.getColon().apply(this);
         node.getType().apply(this);
@@ -815,6 +819,10 @@ public class PrintTree extends DepthFirstAdapter {
                 if (!parent.equals(methodName)) {
                     String scopeId = id + "_" + parent;
                     if (!m.containsVar(scopeId)) {
+                        if(!arr.equals(""))
+                        {
+                            type = type + "_ARRAY" ;
+                        }
                         Variable v = new Variable(scopeId, type);
                         m.addVar(v);
                         c.addMethod(m);
@@ -826,6 +834,10 @@ public class PrintTree extends DepthFirstAdapter {
                     }
                 } else {
                     if (!m.containsVar(id)) {
+                        if(!arr.equals(""))
+                        {
+                            type = type + "_ARRAY" ;
+                        }
                         Variable v = new Variable(id, type);
                         m.addVar(v);
                         c.addMethod(m);
@@ -841,6 +853,10 @@ public class PrintTree extends DepthFirstAdapter {
             if (!parent.equals(methodName)) {
                 String scopeId = id + "_" + parent;
                 if (!m.containsVar(scopeId)) {
+                    if(!arr.equals(""))
+                    {
+                        type = type + "_ARRAY" ;
+                    }
                     Variable v = new Variable(scopeId, type);
                     m.addVar(v);
                     symbolTable.addMethod(m);
@@ -851,6 +867,10 @@ public class PrintTree extends DepthFirstAdapter {
                 }
             } else {
                 if (!m.containsVar(id)) {
+                    if(!arr.equals(""))
+                    {
+                        type = type + "_ARRAY" ;
+                    }
                     Variable v = new Variable(id, type);
                     m.addVar(v);
                     symbolTable.addMethod(m);
@@ -917,8 +937,9 @@ public class PrintTree extends DepthFirstAdapter {
         node.getIf().apply(this);
         node.getLparen().apply(this);
         node.getBoolid().apply(this);
-
-        if (isId) {
+        boolean ifIsId = isId ;
+        isId = false ;
+        if (ifIsId) {
             String id = stack.peek();
             Variable v = null;
             if (inClass) {
@@ -1014,6 +1035,7 @@ public class PrintTree extends DepthFirstAdapter {
         node.getOptionaltype().apply(this);
         String peekType = stack.peek();
         node.getId().apply(this);
+        isId = false ;
         String peekId = stack.peek();
 
         //add the iterator declaration if there is one
@@ -1026,9 +1048,11 @@ public class PrintTree extends DepthFirstAdapter {
                     var = getVarIdInMethodInClass(myParent, peekId, className, methodName);
                     if (var == null) {
                         var = new Variable(scopeId, peekType);
-                        Method m = symbolTable.getMethod(methodName);
+                        Classes c = symbolTable.getMyClass(className) ;
+                        Method m = c.getMethod(methodName);
                         m.addVar(var);
-                        symbolTable.addMethod(m);
+                        c.addMethod(m) ;
+                        symbolTable.addClass(c);
                     }
                 }
             } else if (inMethod) {
@@ -1116,6 +1140,7 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseAGetStmt(AGetStmt node) {
         String parent = myParent;
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
         node.getGet().apply(this);
@@ -1192,6 +1217,7 @@ public class PrintTree extends DepthFirstAdapter {
         node.getPut().apply(this);
         node.getLparen().apply(this);
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getRparen().apply(this);
         node.getSemicolon().apply(this);
@@ -1267,6 +1293,7 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseAIncrementStmt(AIncrementStmt node) {
         String parent = myParent;
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getIncrement().apply(this);
         node.getSemicolon().apply(this);
@@ -1355,6 +1382,7 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseADecrementStmt(ADecrementStmt node) {
         String parent = myParent;
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getDecrement().apply(this);
         node.getSemicolon().apply(this);
@@ -1548,6 +1576,7 @@ public class PrintTree extends DepthFirstAdapter {
         String parent = myParent;
 
         node.getId().apply(this);
+        isId = false ;
         node.getLparen().apply(this);
         node.getVarlisttwo().apply(this);
         node.getRparen().apply(this);
@@ -1702,9 +1731,9 @@ public class PrintTree extends DepthFirstAdapter {
         temp = id + optionalid + period + secondid + lparen + varlisttwo + rparen + optlvarlisttwo + semicolon;
         stack.push(temp);
         temp = "";
-
-        //get the class of the method being called
-        /*     Classes methodClass = getMethodClassForMethodCall(secondid) ;
+/* add to secondPass
+      //  get the class of the method being called - check for parameters 
+            Classes methodClass = getMethodClassForMethodCall(secondid) ;
              Variable var = getObjectForMethodCall(id, methodClass.getClassId()) ;
              if(var == null)
              {
@@ -1825,22 +1854,73 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAReturnStmt(AReturnStmt node) {
+        String parent = myParent ;
+        
         node.getReturn().apply(this);
         node.getExpr().apply(this);
         node.getSemicolon().apply(this);
 
         String semicolon = stack.pop();
         String expr = stack.pop();
+        boolean exprIsId = isId ;
+        isId = false ;
         String returnstmt = stack.pop();
 
         temp = returnstmt + expr + semicolon;
         stack.push(temp);
         temp = "";
+        
+ /*       //error checking for return types that need to be added to secondPass
+        if(inClass)
+        {
+            if(inMethod)
+            {
+                Classes tempClass = symbolTable.getMyClass(className) ;
+                Method tempMethod = symbolTable.getMethod(methodName) ;
+                String type = tempMethod.getType();
+                if(type.equals("VOID"))
+                {
+                    if(!expr.equals(""))
+                    {
+                        error.add("Error in class " + className + " in method " + methodName
+                            + ". The method is type VOID and cannot return a value.") ;
+                    }
+                }
+                else if(exprIsId)
+                {
+                    Variable var = getVarIdInMethodInClass(parent, expr, className, methodName) ;
+                    if(var != null)
+                    {
+                        String varType = var.getType() ;
+                        if(type.equals("INT"))
+                        {
+                            if(!varType.equals("INT") && !varType.equals("BOOLEAN") 
+                                    && !varType.equals("INT_ARRAY") && !varType.equals("BOOLEAN_ARRAY")) //error if the type is string or double
+                            {
+                                error.add("Error in class " + className + " in method " + methodName
+                                    + ". The method is type INT and cannot return type " + varType.replaceAll("_ARRAY", "") + ".") ;
+                            }
+                        }
+                        else if(type.equals("STRING"))
+                        {
+                           if(!varType.equals("STRING") && !varType.equals("STRING_ARRAY"))
+                           {
+                               error.add("Error in class " + className + " in method " + methodName
+                                    + ". The method is type STRING and cannot return type " + varType.replaceAll("_ARRAY", "") + ".") ;
+                           }
+                        }
+                    }
+                   
+                }
+            }
+        } 
+        */
     }
 
     public void caseAIdbooleanStmt(AIdbooleanStmt node) {
         String parent = myParent;
         node.getId().apply(this);
+        isId = false ;
         node.getOptionalidarray().apply(this);
         node.getAssignment().apply(this);
         node.getBoolean().apply(this);
@@ -1897,11 +1977,11 @@ public class PrintTree extends DepthFirstAdapter {
                 type = v.getType();
             }
         }
-        String idScope = getVarId(parent, id);
+      /*  String idScope = getVarId(parent, id);
         if (parent.equals("")) {
             parent = "GLOBAL";
         }
-
+*/
         if (type.equals("STRING")) {
             error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
                 "The variable " + id + " is type STRING and cannot be incremented.");
@@ -1978,6 +2058,7 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseACommaidlistOptlidlist(ACommaidlistOptlidlist node) {
         node.getComma().apply(this);
         node.getId().apply(this);
+        isId = false ;
         node.getOptlidlist().apply(this);
 
         String optlid = stack.pop();
@@ -2084,6 +2165,7 @@ public class PrintTree extends DepthFirstAdapter {
         String parent = myParent;
 
         node.getId().apply(this);
+        isId = false ;
         node.getIncrement().apply(this);
 
         String incr = stack.pop();
@@ -2153,6 +2235,7 @@ public class PrintTree extends DepthFirstAdapter {
         String parent = myParent;
 
         node.getId().apply(this);
+        isId = false ;
         node.getDecrement().apply(this);
 
         String decr = stack.pop();
@@ -2219,6 +2302,7 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseAAssignmentOrstmts(AAssignmentOrstmts node) {
         String parent = myParent;
         node.getId().apply(this);
+        isId = false ;
         node.getAssignment().apply(this);
         node.getExpr().apply(this);
 
@@ -2304,6 +2388,7 @@ public class PrintTree extends DepthFirstAdapter {
     public void caseANonemptyOptlidvarlisttwo(ANonemptyOptlidvarlisttwo node) {
         node.getPeriod().apply(this);
         node.getId().apply(this);
+        isId = false ;
         node.getLparen().apply(this);
         node.getVarlisttwo().apply(this);
         node.getRparen().apply(this);
@@ -2335,6 +2420,7 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAMultipleVarlist(AMultipleVarlist node) {
         node.getId().apply(this);
+        isId = false ;
         node.getColon().apply(this);
         node.getType().apply(this);
         node.getOptionalidarray().apply(this);
@@ -2863,6 +2949,7 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAIdvarlisttwoFactor(AIdvarlisttwoFactor node) {
         node.getId().apply(this);
+        isId = false ;
         node.getLparen().apply(this);
         node.getVarlisttwo().apply(this);
         node.getRparen().apply(this);
@@ -2878,6 +2965,7 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAIdarrvarlisttwoFactor(AIdarrvarlisttwoFactor node) {
         node.getArrayorid().apply(this);
+        isId = false ;
         node.getPeriod().apply(this);
         node.getId().apply(this);
         node.getLparen().apply(this);
@@ -2898,6 +2986,7 @@ public class PrintTree extends DepthFirstAdapter {
 
     public void caseAArrayArrayorid(AArrayArrayorid node) {
         node.getId().apply(this);
+        isId = false ;
         node.getLsquare().apply(this);
         node.getNumber().apply(this);
         node.getRsquare().apply(this);
@@ -2923,7 +3012,6 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAArrayOptionalidarray(AArrayOptionalidarray node) {
-        isId = true;
         node.getLsquare().apply(this);
         node.getNumber().apply(this);
         node.getRsquare().apply(this);
@@ -2954,6 +3042,7 @@ public class PrintTree extends DepthFirstAdapter {
     }
 
     public void caseAIdBoolid(AIdBoolid node) {
+        isId = true ;
         node.getId().apply(this);
     }
 
@@ -2983,23 +3072,58 @@ public class PrintTree extends DepthFirstAdapter {
         String secondExpType = "";
 
         if (firstExprIsId) {
-            if (firstexpr.contains("[")) {
-                firstexpr = firstexpr.replaceAll("[", "");
-                firstexpr = firstexpr.replaceAll("]", "");
+            String type = "";
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable var = getVarIdInMethodInClass(parent, firstexpr, className, methodName);
+                    if (var == null) {
+                        error.add("Error in method " + methodName + " in class " + className + "." +
+                            " The variable " + firstexpr + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =  var;
+                        type = v.getType();
+                    }
+                } else {
+                    Variable var = getVarInClassNotInMethod(parent, firstexpr, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + firstexpr + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, firstexpr, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + firstexpr + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
             }
-
-            String firstExprIdScope = getVarId(parent, firstexpr);
             if (parent.equals("")) {
                 parent = "GLOBAL";
             }
-            if (firstExprIdScope != null) {
-                firstExpVar = symbolTable.getVar(firstExprIdScope);
-                firstExpType = firstExpVar.getType();
-                if (firstExpType.equals("STRING") || firstExpType.equals("STRING_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+
+            if (parent.equals("")) {
+                parent = "GLOBAL";
+            } 
+            
+            if (type.equals("STRING") || type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
                         "The variable " + firstexpr + " is type STRING. Cannot use a string in a conditional expression.");
-                }
-            } else {
+            }       
+          
+            else if(v== null) {
                 error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
                     "The variable " + firstexpr + " has not been declared." +
                     " Cannot use an undeclared variable in a conditional expression.");
@@ -3007,23 +3131,58 @@ public class PrintTree extends DepthFirstAdapter {
         }
 
         if (secondExprIsId) {
-            if (secondexpr.contains("[")) {
-                secondexpr = secondexpr.replaceAll("[", "");
-                secondexpr = secondexpr.replaceAll("]", "");
+           String type = "";
+            Variable v = null;
+            if (inClass) {
+                if (inMethod) {
+                    Variable var = getVarIdInMethodInClass(parent, secondexpr, className, methodName);
+                    if (var == null) {
+                        error.add("Error in method " + methodName + " in class " + className + "." +
+                            " The variable " + secondexpr + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =  var;
+                        type = v.getType();
+                    }
+                } else {
+                    Variable var = getVarInClassNotInMethod(parent, secondexpr, className);
+                    if (var == null) {
+                        error.add("Error in class " + className + "." +
+                            " The variable " + secondexpr + " has not been declared " +
+                            "and cannot be incremented.");
+                    } else {
+                        v =
+                            var;
+                        type = v.getType();
+                    }
+                }
+            } else if (inMethod) {
+                Variable
+                var = getVarIdInMethodNotInClass(parent, secondexpr, methodName);
+                if (var == null) {
+                    error.add("Error in method " + methodName + "." +
+                        " The variable " + secondexpr + " has not been declared " +
+                        "and cannot be incremented.");
+                } else {
+                    v =
+                        var;
+                    type = v.getType();
+                }
             }
-
-            String secondExprIdScope = getVarId(parent, secondexpr);
             if (parent.equals("")) {
                 parent = "GLOBAL";
             }
-            if (secondExprIdScope != null) {
-                secondExpVar = symbolTable.getVar(secondExprIdScope);
-                secondExpType = secondExpVar.getType();
-                if (secondExpType.equals("STRING") || secondExpType.equals("STRING_ARRAY")) {
-                    error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
+
+            if (parent.equals("")) {
+                parent = "GLOBAL";
+            } 
+            
+            if (type.equals("STRING") || type.equals("STRING_ARRAY")) {
+                error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
                         "The variable " + secondexpr + " is type STRING. Cannot use a string in a conditional expression.");
-                }
-            } else {
+            }       
+          
+            else if(v== null) {
                 error.add("Error in " + parent.replaceAll("\\d", "") + ". " +
                     "The variable " + secondexpr + " has not been declared." +
                     " Cannot use an undeclared variable in a conditional expression.");
