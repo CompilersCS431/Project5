@@ -1,0 +1,42 @@
+BEGIN
+	a : STRING ;
+	b : STRING ;
+	c : STRING ;
+	
+	INT pow(x : INT , y : INT)
+	{
+		z : INT ;
+		IF(y == 0) THEN
+		{
+			z := 1 ;
+		}
+		ELSE
+		{
+			z := x ;
+			FOR(INT i := 1 ; i < y ; i++)
+			{
+				z := z * x
+			}
+		}
+		
+		RETRUN z ;
+	}
+	
+	VOID MAIN()
+	{
+		z : INT ;
+		d : INT ;
+		e : INT ;
+		a := "Input a number: " ;
+		b := "Input a power: " ;
+		c := "The result is: " ;
+		PUT(a) ;
+		d := GET() ;
+		PUT(b) ;
+		e := GET() ;
+		z := pow(d , e) ;
+		PUT(c) ;
+		PUT(z) ;
+	}
+
+END
