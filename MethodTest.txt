@@ -1,7 +1,19 @@
 BEGIN
-	a : STRING ;
-	b : STRING ;
-	c : STRING ;
+	inNumber : STRING ;
+	inPower : STRING ;
+	result : STRING ;
+	double : STRING ;
+	triple : STRING ;
+	quad : STRING ;
+	inFact : STRING ;
+	inSwitch : STRING ;
+	inWhile : STRING ;
+	numString : STRING ;
+	arrTest : STRING ;
+	jInF : STRING ;
+	jString : STRING ;
+	triple2 : STRING ;
+	numInP : STRING ;
 	
 	INT pow(x : INT , y : INT)
 	{
@@ -18,37 +30,100 @@ BEGIN
 				z := z * x ;
 			}
 		}
-		
 		RETURN z ;
 	}
 	
 	VOID MAIN()
 	{
+		arrTest := "Testing Arrays" ;
+		PUT(arrTest) ;
+		arr : INT[7] ;
+		arr[0] := 8 ;
+		arr[1] := 6 ;
+		arr[2] := 7 ;
+		arr[3] := 5 ;
+		arr[4] := 3 ;
+		arr[5] := 0 ;
+		arr[6] := 9 ;
+		PUT(arr[0]) ;
+		PUT(arr[1]) ;
+		PUT(arr[2]) ;
+		PUT(arr[3]) ;
+		PUT(arr[4]) ;
+		PUT(arr[5]) ;
+		PUT(arr[6]) ;
+		
+		inNumber := "Input a number: " ;
+		inPower := "Input a positive power: " ;
+		result := "The result is: " ;
+		double := "The result doubled is: " ;
+		
 		z : INT ;
 		x : INT ;
 		d : INT ;
 		e : INT ;
-		a := "Input a number: " ;
-		b := "Input a power: " ;
-		c := "The result is: " ;
-		PUT(a) ;
+
+		PUT(inNumber) ;
 		d := GET() ;
-		PUT(b) ;
+		PUT(inPower) ;
 		e := GET() ;
 		z := pow(d , e) ;
-		PUT(c) ;
+		PUT(result) ;
 		PUT(z) ;
+		
 		x := doubleIt(z) ;
-		PUT(c) ;
+		PUT(double) ;
 		PUT(x) ;
-		x := fact(7) ;
-		PUT(c) ;
+		
+		inFact := "Input a value to test the recursive factorial: " ;
+		PUT(inFact) ;
+		z := GET() ;
+		x := fact(z) ;
+		PUT(result) ;
 		PUT(x) ;
-		x := switchTest(2) ;
-		PUT(c) ;
+		
+		inSwitch := "Input a value to test the switch statement: " ;
+		PUT(inSwitch) ;
+		z := GET() ;
+		x := switchTest(z) ;
+		PUT(result) ;
 		PUT(x) ;
-		PUT(c) ;
+		
+		inWhile := "Input a value to test the while statement: " ;
+		PUT(inWhile) ;
+		x := GET() ;
 		x := whileTest(x) ;
+		PUT(result) ;
+		PUT(x) ;
+		
+		jInF := "Input a value to assign to j in the TestClass object f: " ;
+		PUT(jInF) ;
+		f := NEW TestClass() ;
+		triple := "Three times the value of j in f is: " ;
+		PUT(triple) ;
+		x := f.timesThree() ;
+		PUT(x) ;
+		
+		quad := "Four times the last value is: " ;
+		PUT(quad) ;
+		x := f.timesFour(x) ;
+		PUT(x) ;
+		
+		jString := "The value of j in the object f is: " ;
+		x := f.getJ() ;
+		PUT(x) ;
+		
+		numInP := "Input a value to assign to number in the SecondTestClass object p: " ;
+		PUT(numInP) ;
+		p := NEW SecondTestClass() ;
+		
+		triple2 := "Three times the value of number in p is:" ;
+		PUT(triple2) ;
+		x := p.timesThree() ;
+		PUT(x) ;
+		
+		numString := "the value of number in object p is: " ;
+		x := p.getNum() ;
 		PUT(x) ;
 	}
 	
@@ -101,5 +176,46 @@ BEGIN
 		PUT(y) ;
 		RETURN y ;
 	}
-
+	
+	CLASS TestClass
+	{
+		j : INT ;
+		k : INT ;
+		l : BOOLEAN ;
+		str : STRING ;
+		j := GET() ;
+		
+		INT getJ()
+		{
+			PUT(jString) ;
+			RETURN j ;
+		}
+		
+		INT timesThree()
+		{
+			RETURN j + j + j ;
+		}
+		
+		INT timesFour(q : INT)
+		{
+			RETURN q * 4 ;
+		}
+	}
+	
+	CLASS SecondTestClass
+	{
+		number : INT ;
+		number := GET() ;
+		
+		INT getNum()
+		{
+			PUT(numString) ;
+			RETURN number ;
+		}
+		
+		INT timesThree()
+		{
+			RETURN number + number + number ;
+		}
+	}
 END
