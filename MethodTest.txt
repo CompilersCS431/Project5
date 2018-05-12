@@ -15,16 +15,17 @@ BEGIN
 			z := x ;
 			FOR(INT i := 1 ; i < y ; i++)
 			{
-				z := z * x
+				z := z * x ;
 			}
 		}
 		
-		RETRUN z ;
+		RETURN z ;
 	}
 	
 	VOID MAIN()
 	{
 		z : INT ;
+		x : INT ;
 		d : INT ;
 		e : INT ;
 		a := "Input a number: " ;
@@ -37,6 +38,68 @@ BEGIN
 		z := pow(d , e) ;
 		PUT(c) ;
 		PUT(z) ;
+		x := doubleIt(z) ;
+		PUT(c) ;
+		PUT(x) ;
+		x := fact(7) ;
+		PUT(c) ;
+		PUT(x) ;
+		x := switchTest(2) ;
+		PUT(c) ;
+		PUT(x) ;
+		PUT(c) ;
+		x := whileTest(x) ;
+		PUT(x) ;
+	}
+	
+	INT doubleIt(x : INT)
+	{
+		RETURN x + x ;
+	}
+	
+	INT fact(x : INT)
+	{
+		IF(x == 0) THEN
+		{
+			RETURN 1 ;
+		}
+		ELSE
+		{
+			RETURN x * fact(x - 1) ;
+		}
+	}
+	
+	INT switchTest(x : INT)
+	{
+		y : INT ;
+		y := x ;
+		SWITCH(y)
+		{
+			CASE(1) : 
+				y := 2 ;
+				BREAK ;
+			CASE(2) :
+				y := 4 ;
+				BREAK ;
+			DEFAULT :
+				y := 10 ;
+		}
+		RETURN y ;
+	}
+	
+	INT whileTest(x : INT)
+	{
+		z : INT ;
+		y : INT ;
+		z := 1 ;
+		y := 1 ;
+		WHILE(z < x)
+		{
+			y := y * 2 ;
+			z++ ;
+		}
+		PUT(y) ;
+		RETURN y ;
 	}
 
 END
