@@ -20,6 +20,11 @@ BEGIN
 				z := "The answer is " + x ;
 				PUT(z) ;
 			}
+			
+			aClass := new MobileDev() ;
+			REAL : f ;
+			f := aClass.someMethod(y , z) ;
+			PUT(f) ;
 		}
 		
 		WHILE( h < y ) {
@@ -41,6 +46,47 @@ BEGIN
 				PUT (r) ;
 				r++; 
 			}
+		}
+	}
+	VOID ProgrammingLanguages(i : INT)
+	{
+		x : INT ;
+		x := i * i ;
+		RETURN i ;
+	}
+	
+	CLASS Compilers
+	{
+		x : STRING ;
+		sendHelp : BOOLEAN ;
+		x := GET() ;
+		sendHelp := GET() ;
+		
+		BOOLEAN getSendHelp()
+		{
+			RETURN sendHelp ;
+		}
+	}
+	
+	CLASS MobileDev
+	{
+		z : INT ;
+		y : REAL ;
+		z := GET() ;
+		y := GET() ;
+		
+		BOOLEAN someMethod(q : INT , f : STRING)
+		{
+			z : INT ;
+			if(q)
+			{
+				z := f
+			}
+			ELSE
+			{
+				z := y ;
+			}
+			RETURN z ;
 		}
 	}
 END 
